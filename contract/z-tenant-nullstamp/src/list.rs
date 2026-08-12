@@ -88,11 +88,38 @@ mod wasm {
         let mut terakhir: Option<String> = None;
         for (key, value) in &rows {
             terakhir = Some(String::from_utf8_lossy(key).to_string());
-            match serde_json::from_slice::<Value>(value) {
+
+            // Nilai yang cukup besar tidak disimpan apa adanya. Host
+            // memindahkannya ke penyimpanan beralamat-isi dan menaruh penunjuk
+            // di barisnya, berupa magic `T3VR` diikuti JSON yang memuat
+            // `value_cid`.
+            //
+            // Yang penting: `kv-store.get` menyelesaikan penunjuk itu sendiri dan
+            // memulangkan nilai aslinya, sedangkan `kv-store.scan` memulangkan
+            // penunjuknya mentah. Komentar WIT `scan` menjanjikan pasangan kunci
+            // dan nilai, tanpa menyebut kemungkinan ini. Jadi contract yang
+            // memindai lalu membaca hasilnya dengan cara yang sama seperti hasil
+            // `get` akan gagal tanpa satu pun galat dari host.
+            // Lihat temuan T-14 di docs/BUGS.md.
+            const MAGIC_CAS: &[u8] = b"T3VR";
+
+            let dari_cas = value.starts_with(MAGIC_CAS);
+            let bahan: Vec<u8> = if value.is_empty() || dari_cas {
+                match kv_store::get(&map, key) {
+                    Ok(Some(v)) => v,
+                    Ok(None) => Vec::new(),
+                    Err(_) => Vec::new(),
+                }
+            } else {
+                value.clone()
+            };
+
+            match serde_json::from_slice::<Value>(&bahan) {
                 Ok(v) => receipts.push(v),
                 Err(e) => receipts.push(json!({
                     "receipt_id": terakhir,
-                    "error": format!("baris tersimpan rusak: {e}"),
+                    "error": format!("baris tersimpan tidak terbaca: {e}"),
+                    "dari_penunjuk_cas": dari_cas,
                 })),
             }
         }

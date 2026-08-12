@@ -18,7 +18,9 @@
     "step:10": "tsx src/10-contract-logs.ts",
     "verify:offline": "tsx src/verify-offline.ts",
     "preflight": "tsx src/preflight.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "step:04b": "tsx src/04b-sync-map-acl.ts",
+    "step:11": "tsx src/11-export-receipt.ts"
   },
   "dependencies": {
     "@terminal3/t3n-sdk": "^4.35.1",

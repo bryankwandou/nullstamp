@@ -17,14 +17,14 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nullstamp — bukti terverifikasi untuk agent yang menyentuh data pribadi",
+  title: "Nullstamp — verifiable receipts for agents that touch personal data",
   description:
-    "Setiap kali agent memakai data pribadi seseorang, Nullstamp menerbitkan bukti yang menyebut field apa yang dipakai dan ke mana dikirim, tanpa pernah memuat nilainya. Dibangun di atas Terminal 3 ADK.",
+    "Every time an agent uses someone's personal data, Nullstamp issues a receipt naming which fields were used and where they went, without ever holding the values. Built on the Terminal 3 ADK.",
   metadataBase: new URL("https://nullstamp.vercel.app"),
   openGraph: {
     title: "Nullstamp",
     description:
-      "Bukti yang bisa dihitung ulang siapa pun, untuk panggilan agent yang menyentuh data pribadi.",
+      "Receipts anyone can recompute, for agent calls that touch personal data.",
     type: "website",
   },
 };
@@ -33,7 +33,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${interTight.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >

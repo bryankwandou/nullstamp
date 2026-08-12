@@ -15,18 +15,30 @@
 ///                             `{{profile.<field>}}`; host menyelesaikannya di
 ///                             dalam enclave, jadi plaintext tidak pernah masuk
 ///                             memori WASM
-///   - signing:                tanda tangan secp256k1 tingkat cluster atas
-///                             receipt kanonik. Bersifat opsional: bila
-///                             capability ini tidak diberikan, receipt tetap
-///                             terbit dengan anchor claims-digest saja.
-package z:tenant-nullstamp@0.1.0;
+/// `host:interfaces/signing@2.1.0` sengaja TIDAK di-import.
+///
+/// Versi 0.1.0 meng-import antarmuka itu dan akibatnya contract tidak bisa
+/// diinstansiasi sama sekali: tiap pemanggilan dijawab "Internal error" HTTP 500
+/// tanpa satu baris pun masuk log contract, bahkan untuk fungsi yang tidak
+/// menyentuh penandaan. Antarmukanya ada di host-interfaces-2.1.0 baris 159,
+/// tetapi tampaknya tidak diberikan kepada tenant contract, dan repo acuan resmi
+/// juga tidak meng-import-nya. Lihat temuan T-12 di docs/BUGS.md.
+///
+/// Keutuhan receipt tidak bergantung padanya. Digest ditambatkan lewat
+/// `kv-store.set-claims-digest` ke Merkle leaf transaksi, dan itulah dasar
+/// pemeriksaan di luar node.
+///
+/// `host:interfaces/http` biasa juga tidak di-import, kali ini murni pilihan
+/// rancangan: satu-satunya jalan keluar Nullstamp adalah http-with-placeholders,
+/// sehingga tidak ada jalur di dalam contract ini yang bisa mengirim data tanpa
+/// melewati penyelesaian marker di sisi host.
+package z:tenant-nullstamp@0.1.5;
 
 world tenant-nullstamp {
     import host:tenant/tenant-context@1.0.0;
     import host:interfaces/logging@2.1.0;
     import host:interfaces/kv-store@2.1.0;
     import host:interfaces/http-with-placeholders@2.1.0;
-    import host:interfaces/signing@2.1.0;
 
     export contracts;
 }

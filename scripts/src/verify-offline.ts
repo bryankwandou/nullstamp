@@ -60,17 +60,17 @@ export function periksa(sampul: Record<string, Json>): Hasil {
 
   const core = sampul.core;
   if (core === undefined || core === null) {
-    return { valid: false, alasan: ["sampul tidak memuat core"], digestDihitung: "" };
+    return { valid: false, alasan: ["envelope has no core"], digestDihitung: "" };
   }
 
   const digestDihitung = digestOf(core);
   const tercatat = sampul.digest_sha256;
 
   if (typeof tercatat !== "string") {
-    alasan.push("sampul tidak memuat digest_sha256");
+    alasan.push("envelope has no digest_sha256");
   } else if (tercatat !== digestDihitung) {
     alasan.push(
-      `digest tidak cocok: tercatat ${tercatat}, dihitung ulang ${digestDihitung}`,
+      `digest mismatch: recorded ${tercatat}, recomputed ${digestDihitung}`,
     );
   }
 
@@ -79,7 +79,7 @@ export function periksa(sampul: Record<string, Json>): Hasil {
     const seharusnya = receiptIdFrom(digestDihitung);
     if (id !== seharusnya) {
       alasan.push(
-        `receipt_id tidak sesuai digest: tercatat ${id}, seharusnya ${seharusnya}`,
+        `receipt_id does not derive from digest: recorded ${id}, expected ${seharusnya}`,
       );
     }
   }
@@ -88,7 +88,7 @@ export function periksa(sampul: Record<string, Json>): Hasil {
   // terselesaikan maupun nilai profil. Yang sah hanya nama field.
   const teksCore = JSON.stringify(core);
   if (teksCore.includes("{{")) {
-    alasan.push("core memuat marker yang belum terselesaikan");
+    alasan.push("core still contains an unresolved marker");
   }
 
   return { valid: alasan.length === 0, alasan, digestDihitung };
@@ -102,29 +102,29 @@ function bacaMasukan(): string {
 
 const isi = bacaMasukan().trim();
 if (isi.length === 0) {
-  console.error("tidak ada masukan. Berikan nama berkas atau salurkan lewat stdin.");
+  console.error("no input. Pass a file path or pipe the receipt via stdin.");
   process.exit(2);
 }
 
 const sampul = JSON.parse(isi) as Record<string, Json>;
 const hasil = periksa(sampul);
 
-console.log("receipt_id      :", String(sampul.receipt_id ?? "(tidak ada)"));
-console.log("digest tercatat :", String(sampul.digest_sha256 ?? "(tidak ada)"));
-console.log("digest dihitung :", hasil.digestDihitung);
+console.log("receipt_id      :", String(sampul.receipt_id ?? "(absent)"));
+console.log("digest recorded :", String(sampul.digest_sha256 ?? "(absent)"));
+console.log("digest computed :", hasil.digestDihitung);
 console.log(
-  "tanda tangan    :",
+  "signature       :",
   sampul.signature === null || sampul.signature === undefined
-    ? `tidak ada — ${String(sampul.signing_error ?? "alasan tidak dicatat")}`
+    ? `none — ${String(sampul.signing_error ?? "no reason recorded")}`
     : "ada",
 );
 console.log("");
 
 if (hasil.valid) {
-  console.log("HASIL: sah. Digest dihitung ulang di luar node dan cocok.");
+  console.log("RESULT: valid. Digest recomputed outside the node and it matches.");
   process.exit(0);
 }
 
-console.log("HASIL: tidak sah.");
+console.log("RESULT: invalid.");
 for (const a of hasil.alasan) console.log("  -", a);
 process.exit(1);

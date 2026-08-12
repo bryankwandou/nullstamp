@@ -165,7 +165,7 @@ pub fn issue_receipt(input: &[u8]) -> Result<Vec<u8>, String> {
 mod wasm {
     use super::*;
     use crate::host::{
-        interfaces::{http_with_placeholders as hwp, kv_store, logging, signing},
+        interfaces::{http_with_placeholders as hwp, kv_store, logging},
         tenant::tenant_context,
     };
     use crate::receipt::{self, CoreParams};
@@ -187,7 +187,7 @@ mod wasm {
         }
 
         let _ = logging::info(&format!(
-            "nullstamp: memanggil {} {} untuk {} dengan {} field profil",
+            "nullstamp: calling {} {} for {} with {} profile fields",
             c.method,
             c.host,
             c.purpose,
@@ -204,7 +204,7 @@ mod wasm {
                 Some(c.body_bytes.clone())
             },
         })
-        .map_err(|e| format!("nullstamp: panggilan keluar gagal: {}", describe(e)))?;
+        .map_err(|e| format!("nullstamp: outbound call failed: {}", describe(e)))?;
 
         let core = receipt::build_core(&CoreParams {
             schema: SCHEMA,
@@ -231,7 +231,7 @@ mod wasm {
         // bisa diperiksa di luar node, terlepas dari ada atau tidaknya tanda
         // tangan.
         kv_store::set_claims_digest(&sealed.digest.to_vec())
-            .map_err(|e| format!("nullstamp: gagal menanam claims digest: {e}"))?;
+            .map_err(|e| format!("nullstamp: could not plant claims digest: {e}"))?;
 
         let (signature, signing_error) = sign_core(&sealed.digest);
         let env = receipt::envelope(&sealed, signature, signing_error);
@@ -239,10 +239,10 @@ mod wasm {
         let map = format!("z:{tid_hex}:receipts");
         let stored = serde_json::to_vec(&env).map_err(|e| e.to_string())?;
         kv_store::put(&map, sealed.receipt_id.as_bytes(), &stored)
-            .map_err(|e| format!("nullstamp: gagal menyimpan receipt ke {map}: {e}"))?;
+            .map_err(|e| format!("nullstamp: could not store receipt in {map}: {e}"))?;
 
         let _ = logging::info(&format!(
-            "nullstamp: receipt {} terbit, status upstream {}",
+            "nullstamp: receipt {} issued, upstream status {}",
             sealed.receipt_id, resp.code
         ));
 
@@ -251,30 +251,37 @@ mod wasm {
         Ok(env)
     }
 
-    /// Tanda tangan bersifat pelengkap. Bila capability `signing` tidak
-    /// diberikan kepada contract ini, penerbitan tetap berjalan dan alasannya
-    /// dicatat di receipt daripada disembunyikan.
-    fn sign_core(digest: &[u8; 32]) -> (Option<Value>, Option<String>) {
-        match signing::sign(&digest.to_vec()) {
-            Ok(raw) => match serde_json::from_slice::<Value>(&raw) {
-                Ok(v) => (Some(v), None),
-                Err(e) => (
-                    None,
-                    Some(format!("tanda tangan tidak bisa dibaca sebagai JSON: {e}")),
-                ),
-            },
-            Err(e) => (None, Some(describe_sign(e))),
-        }
+    /// Tanda tangan cluster tidak diambil.
+    ///
+    /// Versi 0.1.0 meng-import `host:interfaces/signing@2.1.0`, dan akibatnya
+    /// contract gagal diinstansiasi: setiap pemanggilan dijawab "Internal error"
+    /// HTTP 500 tanpa satu baris pun masuk log contract, termasuk pemanggilan
+    /// fungsi yang tidak menyentuh penandaan sama sekali. Antarmuka itu ada di
+    /// `host-interfaces-2.1.0/package.wit` baris 159, tetapi tampaknya tidak
+    /// diberikan kepada tenant contract. Repo acuan resmi juga tidak
+    /// meng-import-nya. Rincian pada temuan T-12 di docs/BUGS.md.
+    ///
+    /// Keutuhan receipt tidak bergantung pada tanda tangan ini. Digest-nya
+    /// ditambatkan lewat `kv-store.set-claims-digest`, yang menanamnya ke Merkle
+    /// leaf transaksi, dan itulah dasar pemeriksaan di luar node.
+    fn sign_core(_digest: &[u8; 32]) -> (Option<Value>, Option<String>) {
+        (
+            None,
+            Some(
+                "signing capability not imported; integrity rests on the claims digest"
+                    .to_string(),
+            ),
+        )
     }
 
     fn read_secret(tid_hex: &str, key: &str) -> Result<String, String> {
         let map = format!("z:{tid_hex}:secrets");
         let bytes = kv_store::get(&map, key.as_bytes())
-            .map_err(|e| format!("nullstamp: gagal membaca {map}: {e}"))?
+            .map_err(|e| format!("nullstamp: could not read {map}: {e}"))?
             .ok_or_else(|| {
-                format!("nullstamp: kunci {key} belum ada di {map}; tanam dulu lewat tenant SDK")
+                format!("nullstamp: key {key} is not in {map}; seed it via the tenant SDK first")
             })?;
-        String::from_utf8(bytes).map_err(|e| format!("nullstamp: kredensial bukan UTF-8: {e}"))
+        String::from_utf8(bytes).map_err(|e| format!("nullstamp: credential is not UTF-8: {e}"))
     }
 
     fn verb_of(m: &str) -> hwp::Verb {
@@ -305,15 +312,6 @@ mod wasm {
                     .to_string()
             }
             hwp::HttpError::UpstreamError(reason) => format!("upstream: {reason}"),
-        }
-    }
-
-    fn describe_sign(e: signing::SignError) -> String {
-        match e {
-            signing::SignError::NoSigningKey => "cluster tidak punya kunci penanda".to_string(),
-            signing::SignError::SigningFailed(r) => format!("penandaan gagal: {r}"),
-            signing::SignError::PubkeyFormat => "bentuk kunci publik tidak terbaca".to_string(),
-            signing::SignError::EncodingFailed(r) => format!("penyandian gagal: {r}"),
         }
     }
 }

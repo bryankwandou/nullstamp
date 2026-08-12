@@ -3,129 +3,168 @@
 </p>
 
 <p align="center">
-  Bukti terverifikasi untuk panggilan agent yang menyentuh data pribadi.<br>
-  Dibangun di atas Terminal 3 ADK dan jaringan T3N.
+  Verifiable receipts for agent calls that touch personal data.<br>
+  Built on the Terminal 3 Agent Developer Kit, running on T3N testnet.
+</p>
+
+<p align="center">
+  <a href="https://nullstamp.vercel.app">Live demo</a> ·
+  <a href="https://nullstamp.vercel.app/verify">Verify a receipt</a> ·
+  <a href="docs/BUGS.md">Findings report</a> ·
+  <a href="docs/PROOF.md">Evidence</a>
 </p>
 
 ---
 
-## Masalahnya
+## The problem
 
-Agent yang mengurus hal nyata harus menyentuh nama, tanggal lahir, dan alamat
-surel seseorang. Cara mencatat aktivitas itu hari ini terjepit di antara dua
-kegagalan.
+An agent that does real work has to touch someone's name, date of birth, and
+email address. The ways we record that activity today are caught between two
+failures.
 
-Catatan yang lengkap menyimpan data mentah, sehingga catatan kepatuhan itu
-sendiri menjadi timbunan risiko. Catatan yang diredaksi kehilangan kelengkapan,
-sehingga tidak bisa dibuktikan utuh ketika diperiksa.
+Keep a complete log and you are storing raw personal data, which turns the
+compliance record itself into a liability. Keep a redacted log and you lose
+completeness, so you cannot prove the trail is intact when someone asks.
 
-Kewajiban rekaman EU AI Act Pasal 12 untuk sistem risiko tinggi mulai berlaku
-Agustus 2026, dan GDPR menuntut pemilik data mengetahui field apa yang dipakai,
-kapan, dan untuk tujuan apa. Dua tuntutan itu saling menjegal selama catatannya
-dibuat dengan cara biasa.
+EU AI Act Article 12 record-keeping obligations for high-risk systems take effect
+in August 2026, and GDPR requires data subjects to know which fields were used,
+when, and for what purpose. Those two demands fight each other for as long as the
+record is built the ordinary way.
 
-## Jalan ketiga
+## A third option
 
-T3N memecah kebuntuan itu bukan lewat kebijakan, melainkan lewat bentuk
-sistemnya. Panggilan keluar dikirim melalui `http-with-placeholders`: badan
-permintaan hanya memuat marker `{{profile.<field>}}`, dan host menyelesaikannya
-di dalam enclave, setelah contract selesai menyusun permintaan.
+T3N breaks that deadlock through the shape of the system rather than through
+policy. Outbound calls go through `http-with-placeholders`: the request body
+carries only `{{profile.<field>}}` markers, and the host substitutes them inside
+the enclave, after the contract has finished assembling the request.
 
-Artinya contract memang tidak pernah memegang nilainya. Bukan berjanji tidak
-menyimpan — memang tidak menerima.
+So the contract genuinely never holds the values. It is not promising not to store
+them — it never receives them.
 
-Nullstamp memanfaatkan sifat itu untuk menerbitkan bukti. Setiap penerbitan
-mencatat nama field yang dirujuk, host tujuan, sidik badan permintaan, kode
-status, dan waktu. Semua pernyataan itu diikat satu digest SHA-256, dan digest
-itu ditanam ke Merkle leaf transaksi lewat `kv-store.set-claims-digest`.
+Nullstamp uses that property to issue receipts. Each issuance records the field
+names referenced, the destination host, a digest of the request body, the response
+status, and the time. Those claims are bound by one SHA-256 digest, and that
+digest is planted in the transaction's Merkle leaf via
+`kv-store.set-claims-digest`.
 
-Akibatnya bukti tadi bisa dihitung ulang di luar node. Sudah dibuktikan: sebuah
-receipt yang disusun kode contract berhasil diperiksa oleh program TypeScript
-terpisah, tanpa Rust dan tanpa jaringan, dengan digest yang sama persis. Lihat
-[docs/PROOF.md](docs/PROOF.md).
+The consequence is that the receipt can be recomputed outside the node. That is
+demonstrated, not asserted: a receipt issued inside the enclave on testnet was
+exported and checked by a separate TypeScript program with no SDK and no network
+access, and the digests match exactly. See [docs/PROOF.md](docs/PROOF.md).
 
-## Isi repositori
+## What a receipt records
+
+| Recorded | Never recorded |
+|---|---|
+| `fields_used` — field names, sorted | The field values |
+| `target_host` — where the call went | The upstream response body (only its digest) |
+| `request_body_sha256` | Upstream credentials |
+| `response_code` | |
+| `subject_did`, `tenant_did` | |
+| `issued_at_secs`, `seq_no` — from the cluster clock | |
+
+One design decision is worth calling out. The declared field list is checked
+against the actual request body **before** any traffic leaves. Declaring two
+fields while the body references four is rejected, not recorded. Without that
+rule a receipt could understate its own scope, and a receipt that can shrink its
+own footprint is worthless.
+
+## Repository layout
 
 ```
-contract/z-tenant-nullstamp/   TEE contract, Rust menjadi WASM component
-  src/canon.rs                 pembacaan marker, bentuk kanonik, digest
-  src/receipt.rs               bentuk receipt dan penyegelannya
+contract/z-tenant-nullstamp/   TEE contract, Rust compiled to a WASM component
+  src/canon.rs                 marker parsing, canonical form, digest
+  src/receipt.rs               receipt shape and sealing
   src/issue.rs                 issue-receipt
   src/verify.rs                verify-receipt
   src/list.rs                  list-receipts
-  examples/sample_receipt.rs   pencetak receipt contoh untuk uji lintas bahasa
+  examples/sample_receipt.rs   prints a sample for cross-language testing
 
-scripts/src/                   sepuluh langkah onboarding dan pengelolaan
-  preflight.ts                 pemeriksaan yang jalan tanpa kunci pengembang
-  01-quickstart.ts             handshake dan autentikasi
-  02-claim-tenant.ts           klaim tenant, langkah yang tidak ada di docs
-  03-register-contract.ts      pendaftaran WASM
-  04-create-maps.ts            pembuatan map KV beserta ACL
-  05-seed-secret.ts            penanaman kredensial
-  06-grant-agent.ts            pemasangan grant otorisasi
-  07-issue-receipt.ts          penerbitan bukti
-  08-verify-receipt.ts         pemeriksaan bukti di dalam enclave
-  09-list-receipts.ts          pengambilan jejak
-  10-contract-logs.ts          pembacaan log contract
-  verify-offline.ts            pemeriksa mandiri, tanpa SDK dan tanpa jaringan
+scripts/src/                   onboarding and management steps
+  preflight.ts                 checks that run without a developer key
+  01-quickstart.ts             handshake and authentication
+  02-claim-tenant.ts           tenant admission (undocumented step, see T-04)
+  03-register-contract.ts      WASM registration
+  04-create-maps.ts            KV map creation with ACLs
+  04b-sync-map-acl.ts          re-point ACLs after re-registration (see T-13)
+  05-seed-secret.ts            credential seeding
+  06-grant-agent.ts            authorization grant
+  07-issue-receipt.ts          issue a receipt
+  08-verify-receipt.ts         verify inside the enclave
+  09-list-receipts.ts          read the trail
+  10-contract-logs.ts          read the contract's own log
+  11-export-receipt.ts         export a live receipt to a file
+  verify-offline.ts            standalone verifier: no SDK, no network
 
-web/                           halaman muka dan konsol
-docs/BUGS.md                   laporan temuan onboarding
-docs/PROOF.md                  keluaran apa adanya dari yang sudah dijalankan
-docs/PLAN.md                   rencana dan urutan kerja
-brand/                         tanda, susunan, dan panduan brand
+web/                           landing page and browser verifier
+docs/BUGS.md                   fourteen onboarding findings
+docs/PROOF.md                  verbatim output from every step run
+brand/                         mark, lockup, and brand guidelines
 ```
 
-## Menjalankan
+## Running it
 
-Yang dibutuhkan: Node.js 20 atau lebih baru, Rust dengan target
-`wasm32-wasip2`, dan `wasm-tools`.
+Requirements: Node.js 20 or newer, Rust with the `wasm32-wasip2` target, and
+`wasm-tools`.
 
 ```bash
-# 1. bangun contract
+# 1. build the contract
 cd contract/z-tenant-nullstamp
 rustup target add wasm32-wasip2
 cargo test --target "$(rustc -vV | sed -n 's/^host: //p')"
 cargo build --target wasm32-wasip2 --release
 wasm-tools component wit target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
 
-# 2. periksa lingkungan, belum perlu kunci pengembang
+# 2. check the environment — no developer key needed yet
 cd ../../scripts
 npm install
 npm run preflight
 
-# 3. buktikan digest bisa dihitung ulang di luar node
+# 3. prove the digest can be recomputed outside the node
 cd ../contract/z-tenant-nullstamp
 cargo run --example sample_receipt > ../../submission/sample-receipt.json
 cd ../../scripts
 npm run verify:offline -- ../submission/sample-receipt.json
 ```
 
-Untuk langkah yang menyentuh testnet, kunci pengembang harus diklaim lebih
-dulu di <https://go.terminal3.io/adk-community>. Kunci itu hanya ditampilkan satu
-kali dan tidak bisa diambil ulang, jadi salin segera. Setelah itu:
+For the steps that touch testnet you need a developer key from
+<https://go.terminal3.io/adk-community>. It is shown once and cannot be retrieved
+again, so copy it immediately.
 
 ```bash
 cd scripts
-cp .env.example .env      # isi T3N_API_KEY
-npm run step:01           # sampai step:10
+cp .env.example .env      # set T3N_API_KEY
+npm run step:01           # through step:11
 ```
 
-## Catatan untuk tim Terminal 3
+## Notes for the Terminal 3 team
 
-Contoh kode pertama pada halaman Quickstart tidak bisa berjalan apa adanya:
-field `trustAnchor` bersifat wajib pada `T3nClientConfig`, dan `T3nConfigError`
-dilempar di constructor sebelum ada lalu lintas jaringan. Halaman galat umum juga
-menyatakan `tenant_did()` sudah berbentuk string, padahal WIT-nya memulangkan 20
-bita mentah dan repo acuan resmi memang menyandikannya dengan `hex::encode`.
+Fourteen findings with reproduction steps are in [docs/BUGS.md](docs/BUGS.md),
+ordered by weight. The four that came out of actually running a contract on
+testnet are the ones I would read first, because none of them are discoverable
+from the documentation:
 
-Sepuluh temuan beserta langkah reproduksinya ada di [docs/BUGS.md](docs/BUGS.md),
-diurutkan menurut bobot. Satu usulan juga ada di sana: `set-claims-digest` layak
-diberi halaman sendiri, sebab kalimat "so clients can verify receipts offline"
-pada komentar WIT-nya menjawab
-pertanyaan tersulit tentang komputasi rahasia, dan tidak ada satu pun halaman ADK
-yang membahasnya.
+- **T-11** — `tenant.claim()` answers HTTP 500 on an already-provisioned tenant,
+  rather than reporting `already-admitted`. Two request ids included.
+- **T-12** — importing `signing@2.1.0` makes the contract fail to instantiate.
+  Registration succeeds, then every call returns an opaque 500 with an empty
+  contract log, including calls to functions that never touch signing.
+- **T-13** — contract ids are minted per registration and map ACLs bind to the
+  id, so every re-register silently invalidates every map ACL.
+- **T-14** — `kv-store.scan` returns raw CAS pointer envelopes (`T3VR` magic)
+  where `kv-store.get` resolves them, with no error and no mention in the WIT.
 
-## Lisensi
+Also, the first code sample on the Quickstart cannot run as written:
+`trustAnchor` is required on `T3nClientConfig` and `T3nConfigError` is thrown in
+the constructor before any network traffic. The same sample appears on the claim
+page.
+
+And one proposal: `set-claims-digest` deserves a page of its own. Its WIT comment
+says the digest is planted in the Merkle leaf "so clients can verify receipts
+offline" — which answers the hardest question about confidential computing, and
+no ADK page discusses it. This project is built on that capability and the result
+holds up.
+
+## License
 
 MIT.

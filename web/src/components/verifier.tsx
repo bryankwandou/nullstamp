@@ -1,16 +1,16 @@
 "use client";
 
 /**
- * Verifier receipt yang berjalan sepenuhnya di peramban.
+ * A receipt verifier that runs entirely in the browser.
  *
- * Tombol pengubahan disediakan bukan sebagai hiasan, melainkan karena satu-satunya
- * cara meyakinkan orang bahwa pemeriksaan ini nyata adalah membiarkan mereka
- * merusaknya sendiri lalu melihat pemeriksaannya menolak.
+ * The tamper buttons are not decoration. The only way to convince someone the
+ * check is real is to let them break the receipt themselves and watch it get
+ * rejected.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  RECEIPT_CONTOH,
+  SAMPLE_RECEIPT,
   periksa,
   type Envelope,
   type Hasil,
@@ -18,27 +18,27 @@ import {
 } from "@/lib/receipt";
 
 type Pengubahan =
-  | { jenis: "asli" }
-  | { jenis: "sembunyikan-field" }
-  | { jenis: "tukar-host" }
-  | { jenis: "perbaiki-digest" };
+  | { jenis: "original" }
+  | { jenis: "hide-field" }
+  | { jenis: "swap-host" }
+  | { jenis: "repair-digest" };
 
 const PILIHAN: Array<{ nilai: Pengubahan["jenis"]; label: string; catatan: string }> = [
-  { nilai: "asli", label: "Receipt asli", catatan: "keluaran apa adanya dari contract" },
+  { nilai: "original", label: "Original receipt", catatan: "verbatim output from the contract on testnet" },
   {
-    nilai: "sembunyikan-field",
-    label: "Sembunyikan satu field",
-    catatan: "mengaku memakai lebih sedikit data daripada kenyataannya",
+    nilai: "hide-field",
+    label: "Hide a field",
+    catatan: "claim less data than was actually touched",
   },
   {
-    nilai: "tukar-host",
-    label: "Tukar host tujuan",
-    catatan: "mengubah ke mana data dikirim",
+    nilai: "swap-host",
+    label: "Swap the host",
+    catatan: "change where the data was sent",
   },
   {
-    nilai: "perbaiki-digest",
-    label: "Ubah isi, lalu perbaiki digest",
-    catatan: "percobaan paling teliti: digest dibuat konsisten kembali",
+    nilai: "repair-digest",
+    label: "Edit, then repair the digest",
+    catatan: "the careful attack: make the digest agree again",
   },
 ];
 
@@ -47,14 +47,14 @@ function terapkan(env: Envelope, p: Pengubahan["jenis"]): Envelope {
   const core = salinan.core as Record<string, Json>;
 
   switch (p) {
-    case "sembunyikan-field":
+    case "hide-field":
       core.fields_used = ["first_name"];
       return salinan;
-    case "tukar-host":
-      core.target_host = "api.penyerang.com";
+    case "swap-host":
+      core.target_host = "api.attacker.com";
       return salinan;
-    case "perbaiki-digest":
-      core.purpose = "tujuan_yang_diganti";
+    case "repair-digest":
+      core.purpose = "substituted_purpose";
       return salinan;
     default:
       return salinan;
@@ -62,20 +62,20 @@ function terapkan(env: Envelope, p: Pengubahan["jenis"]): Envelope {
 }
 
 export function Verifier() {
-  const [pengubahan, setPengubahan] = useState<Pengubahan["jenis"]>("asli");
-  const [teks, setTeks] = useState(() => JSON.stringify(RECEIPT_CONTOH, null, 2));
+  const [pengubahan, setPengubahan] = useState<Pengubahan["jenis"]>("original");
+  const [teks, setTeks] = useState(() => JSON.stringify(SAMPLE_RECEIPT, null, 2));
   const [hasil, setHasil] = useState<Hasil | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
   const [sedang, setSedang] = useState(false);
 
   const pilih = useCallback(async (jenis: Pengubahan["jenis"]) => {
     setPengubahan(jenis);
-    const diubah = terapkan(RECEIPT_CONTOH, jenis);
+    const diubah = terapkan(SAMPLE_RECEIPT, jenis);
 
-    // Untuk percobaan yang paling teliti, digest ikut dihitung ulang supaya
-    // konsisten dengan isi yang sudah diganti. Yang menggagalkannya adalah
-    // identitas receipt, yang diturunkan dari digest.
-    if (jenis === "perbaiki-digest") {
+    // For the careful attack, the digest is recomputed so that it agrees with
+    // the edited content. What still fails is the receipt identity, which derives
+    // from the digest.
+    if (jenis === "repair-digest") {
       const { digestOf } = await import("@/lib/receipt");
       diubah.digest_sha256 = await digestOf(diubah.core as Json);
     }
@@ -110,11 +110,11 @@ export function Verifier() {
   }, [teks]);
 
   const lencana = useMemo(() => {
-    if (galat) return { teks: "JSON tidak terbaca", warna: "text-pending", titik: "bg-pending" };
-    if (!hasil) return { teks: "menghitung", warna: "text-faint", titik: "bg-faint" };
+    if (galat) return { teks: "Cannot parse JSON", warna: "text-pending", titik: "bg-pending" };
+    if (!hasil) return { teks: "computing", warna: "text-faint", titik: "bg-faint" };
     return hasil.sah
-      ? { teks: "Sah", warna: "text-verified", titik: "bg-verified" }
-      : { teks: "Tidak sah", warna: "text-denied", titik: "bg-denied" };
+      ? { teks: "Valid", warna: "text-verified", titik: "bg-verified" }
+      : { teks: "Invalid", warna: "text-denied", titik: "bg-denied" };
   }, [hasil, galat]);
 
   return (
@@ -126,7 +126,7 @@ export function Verifier() {
           />
           <span className={`text-[14px] font-medium ${lencana.warna}`}>{lencana.teks}</span>
           <span className="text-[13px] text-faint">
-            dihitung di peramban, tanpa permintaan jaringan
+            computed in your browser, with no network request
           </span>
         </div>
       </div>
@@ -170,7 +170,7 @@ export function Verifier() {
 
         <div className="p-4">
           <p className="font-mono text-[11px] uppercase tracking-wider text-faint">
-            pemeriksaan
+            checks
           </p>
 
           <ul className="mt-3 space-y-2.5">
@@ -198,20 +198,20 @@ export function Verifier() {
 
           {hasil && (
             <div className="mt-5 space-y-3 border-t border-line pt-4">
-              <Baris label="digest dihitung" nilai={hasil.digestDihitung} />
+              <Baris label="digest computed" nilai={hasil.digestDihitung} />
               <Baris
-                label="digest tercatat"
-                nilai={String((JSON.parse(teks) as Envelope).digest_sha256 ?? "tidak ada")}
+                label="digest recorded"
+                nilai={String((JSON.parse(teks) as Envelope).digest_sha256 ?? "absent")}
               />
             </div>
           )}
 
-          {pengubahan === "perbaiki-digest" && (
+          {pengubahan === "repair-digest" && (
             <p className="mt-5 rounded-md border border-line bg-bg px-3 py-2.5 text-[13px] leading-relaxed text-muted">
-              Digest sudah dibuat konsisten dengan isi yang diganti, jadi
-              pemeriksaan digest lolos. Yang menggagalkannya adalah identitas
-              receipt, sebab identitas itu diturunkan dari digest dan tidak bisa
-              ikut diperbaiki tanpa mengubah dirinya sendiri.
+              The digest has been recomputed to agree with the edited content, so
+              the digest check passes. What still fails is the receipt identity,
+              because it derives from the digest and cannot be repaired without
+              becoming a different identity.
             </p>
           )}
         </div>

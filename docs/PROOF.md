@@ -1,12 +1,13 @@
-# Bukti yang bisa diperiksa ulang
+# Evidence
 
-Berkas ini memuat keluaran apa adanya dari langkah-langkah yang sudah dijalankan.
-Semuanya bisa diulang oleh siapa pun yang meng-clone repositori ini. Tidak ada
-angka di halaman ini yang ditulis tangan.
+Verbatim output from every step that has been run. Nothing on this page is
+typed by hand, and all of it can be reproduced from a fresh clone.
+
+Live testnet, tenant `did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4`.
 
 ---
 
-## 1. Contract terbangun dan lolos uji
+## 1. The contract builds and its tests pass
 
 ```
 $ cargo test --target x86_64-pc-windows-gnu
@@ -15,13 +16,13 @@ test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 $ cargo build --target wasm32-wasip2 --release
-    Finished `release` profile [optimized] target(s) in 33.93s
-254053 bita  target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
+    Finished `release` profile [optimized] target(s) in 8.80s
+252868 bytes  target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
 ```
 
-Tanpa peringatan compiler.
+No compiler warnings. Well inside the tenant quota of `max_wasm_bytes: 1048576`.
 
-## 2. Component-nya sah, dan permukaan kemampuannya minimum
+## 2. The component is valid and its capability surface is minimal
 
 ```
 $ wasm-tools component wit target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
@@ -31,153 +32,308 @@ world root {
   import host:interfaces/logging@2.1.0;
   import host:interfaces/kv-store@2.1.0;
   import host:interfaces/http-with-placeholders@2.1.0;
-  import host:interfaces/signing@2.1.0;
   ...
-  export z:tenant-nullstamp/contracts@0.1.0;
+  export z:tenant-nullstamp/contracts@0.1.5;
 }
 ```
 
-Yang menarik, `wit-bindgen` memangkas antarmuka yang di-import sampai ke fungsi
-yang benar-benar dipakai. Pada component hasil, `logging` menyisakan `info` saja,
-dan `kv-store` menyisakan `get`, `put`, `set-claims-digest`, dan `scan`. Karena
-host menolak contract yang meminta antarmuka di luar dunianya, permukaan
-kemampuan yang sempit ini bukan sekadar kerapian, melainkan batas yang ditegakkan.
+Two absences are deliberate and worth stating.
 
-Perlu dicatat: `http` biasa sengaja tidak di-import. Nullstamp hanya punya satu
-jalan keluar, yaitu `http-with-placeholders`. Jadi tidak ada jalur di dalam
-contract ini yang bisa mengirim data tanpa melewati penyelesaian marker di sisi
-host.
+Plain `http` is not imported. Nullstamp has exactly one way out —
+`http-with-placeholders` — so no path inside this contract can send data without
+passing through host-side marker resolution. That is a design choice, not a
+default.
 
-## 3. Testnet terjangkau dan attestation-nya terverifikasi
+`signing@2.1.0` is not imported either, but for a different reason: importing it
+prevents the contract from being instantiated at all. See finding T-12.
 
-Dijalankan tanpa kunci pengembang.
+`wit-bindgen` also trims imports to what is actually called. In the built
+component `logging` narrows to `info`, and `kv-store` narrows to `get`, `put`,
+`set-claims-digest`, and `scan`. Since the host rejects a contract that asks for
+anything outside its world, that narrow surface is an enforced boundary rather
+than tidiness.
+
+## 3. The testnet is reachable and its attestation verifies
+
+Runs without a developer key.
 
 ```
 $ npm run preflight
 
-Lingkungan SDK
-  [ok]    lingkungan bawaan SDK — testnet
-  [ok]    alamat node — https://cn-api.sg.testnet.t3n.terminal3.io
+SDK environment
+  [ok]    SDK default environment — testnet
+  [ok]    node address — https://cn-api.sg.testnet.t3n.terminal3.io
 
-Keterjangkauan node
-  [ok]    endpoint manifest — HTTP 200
+Node reachability
+  [ok]    manifest endpoint — HTTP 200
 
 Attestation
-  [ok]    manifest operator — tanda tangan sah, 3 peer, 1 pengukuran RTMR3
-  [ok]    waktu penandatanganan — 2026-08-11T14:14:45Z
+  [ok]    operator manifest — signature valid, 3 peers, 1 RTMR3 measurement
+  [ok]    signing time — 2026-08-11T14:14:45Z
 
-Komponen kriptografi SDK
-  [ok]    loadWasmComponent — komponen termuat
+SDK crypto component
+  [ok]    loadWasmComponent — component loaded
 ```
 
-## 4. Digest receipt bisa dihitung ulang lintas bahasa
-
-Ini pernyataan inti Nullstamp, jadi tidak cukup dijelaskan; harus ditunjukkan.
-
-Sebuah receipt disusun oleh kode Rust yang sama dengan yang berjalan di dalam
-enclave:
+## 4. Authentication returns the DID the claim page issued
 
 ```
-$ cargo run --example sample_receipt
+$ npm run step:01
+
+environment: sandbox
+anchor verified — 3 peers, 1 RTMR3 measurement
+node       : https://cn-api.sg.testnet.t3n.terminal3.io
+eth address: 0xcbdf0480addeacbe6e7b27154585db65ad249379
+tenant DID : did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4
+```
+
+The DID matches the one printed on the claim page character for character, which
+confirms the derivation path from API key to Ethereum address to DID.
+
+Note that this ran with the corrected client configuration from findings T-01 and
+T-02. It worked on the first attempt.
+
+## 5. Tenant state and quotas
+
+```
+$ npm run step:02
+
+status : active
+label  : testnet-dev
+
+tenant already active — the SSO claim page had already done it.
+re-claim skipped, because tenant.claim() on an active tenant answers 500.
+
+credit balance:
+  available : 19939779025
+  reserved  : 0
+
+quotas that bound the work ahead:
+  max_contracts               : 10
+  max_maps                    : 50
+  max_wasm_bytes              : 1048576
+  outbox_calls_per_minute_max : 10
+  fuel_per_call_max           : 50000000
+```
+
+The skip is not laziness — see finding T-11.
+
+## 6. Registration, maps, credential, grant
+
+```
+$ npm run step:03
+wasm size      : 252868 bytes
+canonical name : z:f21dce7928980eeea7dc93618b91f602a80fe1c4:nullstamp
+contract id    : 621
+
+$ npm run step:04
+created : z:f21dce…:secrets   -> active
+created : z:f21dce…:receipts  -> active
+
+$ npm run step:04b
+effective contract id : 621
+  readers & writers now restricted to contract 621
+
+$ npm run step:05
+seeded  : z:f21dce…:secrets / upstream_api_key
+read back, 36 characters
+
+$ npm run step:06
+functions      : issue-receipt, verify-receipt, list-receipts
+allowed hosts  : postman-echo.com
+validFromSecs  : 1786535847
+validUntilSecs : 1794311847
+```
+
+Step 04b exists because of finding T-13: contract ids are minted per
+registration, and map ACLs bind to the id.
+
+## 7. A receipt issued inside the enclave
+
+```
+$ npm run step:07
+
+target        : https://postman-echo.com/post
+declared      : first_name, last_name
+body sent     : {"reason":"nullstamp_demo",
+                 "first_name":"{{profile.first_name}}",
+                 "last_name":"{{profile.last_name}}"}
+
 {
   "core": {
-    "contract_id": 41,
-    "contract_version": "0.1.0",
-    "extracted_pointers": [ "/json/keperluan" ],
+    "contract_id": 621,
+    "contract_version": "0.1.5",
+    "extracted_pointers": [ "/json/reason" ],
     "fields_used": [ "first_name", "last_name" ],
-    "issued_at_secs": 1786457685,
+    "issued_at_secs": 1786537397,
     "method": "POST",
-    "purpose": "peragaan_penerbitan_bukti",
-    "request_body_sha256": "7d3a1f0c9b8e6d5a4c3b2a1908f7e6d5c4b3a2910f8e7d6c5b4a39281706f5e4d",
-    "response_body_sha256": "1a2b3c4d5e6f70819293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c4d5e6f7081",
+    "purpose": "receipt_issuance_demo",
+    "request_body_sha256": "26e5ee62768086e9213455818dbc5d17b41356f41f3d36ac92979a9059cffc6b",
+    "response_body_sha256": "af8e3bce0cd50618030d03a18241046b5b8c8e41c173b6400eb754568a8528f2",
     "response_code": 200,
     "schema": "nullstamp.receipt.v1",
-    "seq_no": 10482,
-    "subject_did": "3c5d7e9f001122334455667788990aabbccddeef",
+    "seq_no": 112964,
+    "subject_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4",
     "target_host": "postman-echo.com",
     "target_url": "https://postman-echo.com/post",
-    "tenant_did": "9f2a4c7b1e5d8a3f6b0c2d4e6f8a1b3c5d7e9f00"
+    "tenant_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4"
   },
-  "digest_sha256": "c212bc7936f8120043cdc61780e4fb3a0b5331eca3a392f5edae5350ff07d945",
-  "receipt_id": "rcpt_c212bc7936f8120043cdc617",
+  "digest_sha256": "4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe",
+  "extracted": { "/json/reason": "nullstamp_demo" },
+  "receipt_id": "rcpt_4d8790a69bad4bbfd53c757f",
   "signature": null,
-  "signing_error": "capability signing tidak diberikan pada contract ini"
+  "signing_error": "signing capability not imported; integrity rests on the claims digest"
 }
 ```
 
-Perhatikan bahwa `core` hanya memuat **nama** field, yaitu `first_name` dan
-`last_name`. Nilainya tidak ada, dan memang tidak pernah bisa ada, karena kode
-yang menyusun bagian ini tidak menerimanya.
+Several things are load-bearing here.
 
-Receipt yang sama lalu diperiksa oleh program terpisah dalam TypeScript. Program
-itu tidak mengimpor SDK, tidak membuka sesi, dan tidak menyentuh jaringan:
+`response_code` is 200, so the outbound call really left the enclave and reached
+the upstream. `extracted` shows the response was parsed, which is only possible
+if the round trip happened. `seq_no` and `issued_at_secs` come from the cluster,
+not from my machine.
 
-```
-$ npm run verify:offline -- ../submission/sample-receipt.json
+And `core` lists only field **names**. The values are absent and cannot be
+present, because the code that assembles this section never receives them.
 
-receipt_id      : rcpt_c212bc7936f8120043cdc617
-digest tercatat : c212bc7936f8120043cdc61780e4fb3a0b5331eca3a392f5edae5350ff07d945
-digest dihitung : c212bc7936f8120043cdc61780e4fb3a0b5331eca3a392f5edae5350ff07d945
-tanda tangan    : tidak ada — capability signing tidak diberikan pada contract ini
-
-HASIL: sah. Digest dihitung ulang di luar node dan cocok.
-```
-
-Kedua sisi sampai pada digest yang sama karena keduanya menyusun bentuk kanonik
-dengan aturan yang sama: kunci objek urut menaik, tanpa spasi. Di sisi Rust sifat
-itu datang dari `serde_json` yang bersandar pada `BTreeMap`; di sisi TypeScript
-ditulis ulang dalam sepuluh baris.
-
-## 5. Pengubahan sekecil apa pun tertangkap
-
-Dua percobaan, keduanya dilakukan pada receipt yang sudah sah di atas.
-
-**Menyembunyikan satu field yang sebenarnya dipakai.** Ini bentuk kecurangan yang
-paling mungkin terjadi di dunia nyata: mengaku memakai lebih sedikit data
-daripada kenyataannya.
+## 8. Verification inside the enclave
 
 ```
-$ node -e "... e.core.fields_used=['first_name'] ..."
+$ npm run step:08
+
+checking: rcpt_4d8790a69bad4bbfd53c757f
+{
+  "digest_sha256": "4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe",
+  "reason": null,
+  "receipt_id": "rcpt_4d8790a69bad4bbfd53c757f",
+  "valid": true
+}
+```
+
+## 9. The trail, and the contract's own log
+
+```
+$ npm run step:09
+
+count: 4
+rcpt_477609b57a71786d34613857 | POST postman-echo.com | 200 | ["first_name","last_name"]
+rcpt_4d8790a69bad4bbfd53c757f | POST postman-echo.com | 200 | ["first_name","last_name"]
+rcpt_51e9569d673ac2fc7e154fa2 | POST postman-echo.com | 200 | ["first_name","last_name"]
+rcpt_5bd9c8970986c53d5ec82043 | POST postman-echo.com | 200 | ["first_name","last_name"]
+
+$ npm run step:10
+
+{
+  "entries": [
+    {
+      "level": "info",
+      "message": "nullstamp: calling POST postman-echo.com for receipt_issuance_demo with 2 profile fields"
+    },
+    {
+      "level": "info",
+      "message": "nullstamp: receipt rcpt_4d8790a69bad4bbfd53c757f issued, upstream status 200"
+    }
+  ],
+  "next_seq": 1,
+  "truncated": false
+}
+```
+
+The four receipts were issued across successive registrations of the same
+contract, and the newest deployment reads all of them.
+
+The log names the field count, never the field values. That is the discipline the
+whole design exists to enforce, and it holds even in the debugging surface.
+
+Getting `list-receipts` to this state required finding T-14: `scan` returns raw
+CAS pointers where `get` resolves them.
+
+## 10. The central claim: a live receipt verified outside the node
+
+This is the part that matters, so it is not asserted — it is run.
+
+```
+$ npm run step:11
+saved to    : submission/live-receipt.json
+receipt_id  : rcpt_4d8790a69bad4bbfd53c757f
+digest      : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
+target host : postman-echo.com
+fields used : ["first_name","last_name"]
+seq_no      : 112964
+
+$ npm run verify:offline -- ../submission/live-receipt.json
+
+receipt_id      : rcpt_4d8790a69bad4bbfd53c757f
+digest recorded : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
+digest computed : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
+signature       : none — signing capability not imported; integrity rests on the claims digest
+
+RESULT: valid. Digest recomputed outside the node and it matches.
+exit=0
+```
+
+The verifier imports no SDK, opens no session, and makes no network request. It
+reads a JSON file and computes SHA-256 over the canonical form.
+
+Both sides agree because both build the canonical form by the same rule: object
+keys ascending, no whitespace, array order preserved. On the Rust side that comes
+from `serde_json` resting on `BTreeMap`; on the TypeScript side it is ten lines.
+
+The same check runs in any browser at
+[nullstamp.vercel.app/verify](https://nullstamp.vercel.app/verify), using Web
+Crypto, with no request to us.
+
+## 11. Tampering is rejected
+
+Three attempts, all against the live receipt above.
+
+**Hiding a field that was actually used.** The most realistic cheat: claiming less
+data than you touched. Here `fields_used` is cut from two entries to one.
+
+```
 $ npm run verify:offline -- ../submission/tampered-fields.json
 
-HASIL: tidak sah.
-  - digest tidak cocok: tercatat c212bc79…d945, dihitung ulang 272a4f33…7470
-  - receipt_id tidak sesuai digest: tercatat rcpt_c212bc7936f8120043cdc617,
-    seharusnya rcpt_272a4f33840c5302c40a25f9
+RESULT: invalid.
+  - digest mismatch: recorded 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe,
+                     recomputed 4d90dffcfb8aea87b31b05c9f709fa7c3ef369aebedcc563ee76e055ee10817b
+  - receipt_id does not derive from digest: recorded rcpt_4d8790a69bad4bbfd53c757f,
+                                            expected rcpt_4d90dffcfb8aea87b31b05c9
 exit=1
 ```
 
-**Menukar host tujuan.**
+**Swapping the destination host** to `api.attacker.com`.
 
 ```
-$ node -e "... e.core.target_host='api.penyerang.com' ..."
 $ npm run verify:offline -- ../submission/tampered-host.json
 
-HASIL: tidak sah.
-  - digest tidak cocok: tercatat c212bc79…d945, dihitung ulang 3d12b64b…5154
-  - receipt_id tidak sesuai digest
+RESULT: invalid.
+  - digest mismatch: recorded 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe,
+                     recomputed 8403e3cf61663c846f4cd3fad2ec2e1840e85fc76f58071e463338447354d39b
+  - receipt_id does not derive from digest
 exit=1
 ```
 
-Ada satu lapis lagi. Seseorang yang mengubah `core` lalu ikut memperbarui
-`digest_sha256` supaya konsisten masih akan tertangkap, karena `receipt_id`
-diturunkan dari digest. Keadaan itu diuji di sisi contract:
+Exit codes were measured directly, not through a pipe: the valid receipt exits 0,
+both tampered files exit 1.
+
+**Editing the content and repairing the digest to match.** The careful version of
+the attack. It still fails, because the receipt id derives from the digest and
+cannot be repaired without becoming a different id:
 
 ```
 $ cargo test digest_yang_dipalsukan_agar_cocok_tetap_gagal_di_identitas
 test verify::tests::digest_yang_dipalsukan_agar_cocok_tetap_gagal_di_identitas ... ok
 ```
 
-## 6. Yang belum bisa ditunjukkan
+## 12. What is not proven here
 
-Jujur soal batas pekerjaan ini.
+The receipt above was issued by a tenant contract, where the calling user profile
+is `None`. So while the request body carried `{{profile.…}}` markers and the
+upstream returned 200, this run does not demonstrate markers being **substituted**
+with real values — it demonstrates that the contract never holds them.
 
-Langkah 2 sampai 10 — klaim tenant, pendaftaran contract, pembuatan map,
-penanaman kredensial, pemasangan grant, penerbitan receipt di dalam enclave —
-membutuhkan kunci pengembang yang hanya bisa diperoleh lewat SSO di halaman
-klaim, dan kunci itu hanya ditampilkan satu kali. Kunci itu belum ada di tangan.
+Proving substitution end to end needs a user session with a populated profile,
+which is the natural next step for this contract and is not covered by the
+onboarding brief.
 
-Seluruh kode untuk langkah-langkah tersebut sudah ditulis, sudah lolos
-`tsc --noEmit`, dan tinggal dijalankan. Begitu kunci masuk ke `scripts/.env`,
-urutannya adalah `npm run step:01` sampai `step:10`, dan halaman ini akan
-diperbarui dengan keluaran nyatanya beserta tangkapan layar.
+Everything else on this page is a live result.

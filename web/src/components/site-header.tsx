@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { Wordmark } from "./logo";
 
 const TAUTAN = [
-  { href: "/#mekanisme", label: "Mekanisme" },
-  { href: "/verifikasi", label: "Verifikasi" },
-  { href: "/temuan", label: "Temuan" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/verify", label: "Verify" },
+  { href: "/findings", label: "Findings" },
 ];
 
 export function SiteHeader() {
@@ -48,7 +48,7 @@ export function SiteHeader() {
             href="https://github.com/bryankwandou/nullstamp"
             className="ml-2 rounded-md border border-line px-3 py-2 text-[14px] text-ink transition-colors duration-150 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"
           >
-            Kode
+            Code
           </a>
         </nav>
       </div>

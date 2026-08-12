@@ -17,7 +17,7 @@ import { requireState, writeState } from "./state.js";
 
 /** Susun badan permintaan yang setiap nilainya berupa marker profil. */
 function badanPermintaan(fields: string[]): Record<string, string> {
-  const body: Record<string, string> = { keperluan: "peragaan_nullstamp" };
+  const body: Record<string, string> = { reason: "nullstamp_demo" };
   for (const f of fields) body[f] = `{{profile.${f}}}`;
   return body;
 }
@@ -33,12 +33,12 @@ try {
   const tenant = openTenantClient(s);
 
   const input: Record<string, unknown> = {
-    purpose: "peragaan_penerbitan_bukti",
+    purpose: "receipt_issuance_demo",
     method: "POST",
     url: TARGET_URL,
     declared_fields: DEMO_FIELDS,
     body_template: badanPermintaan(DEMO_FIELDS),
-    extract: ["/json/keperluan"],
+    extract: ["/json/reason"],
   };
   if (PAKAI_SECRET) input.secret_key = SECRET_KEY;
 

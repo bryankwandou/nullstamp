@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Diagram alur satu penerbitan bukti.
+ * The flow of a single receipt issuance.
  *
- * Yang perlu tertangkap pembaca cuma satu: batas enclave berada di antara
- * contract dan pihak ketiga, dan penyelesaian marker terjadi di batas itu.
- * Karena itu batasnya digambar sebagai kotak yang benar-benar melingkupi, bukan
- * sekadar label.
+ * There is one thing a reader has to take away: the enclave boundary sits between
+ * the contract and the third party, and marker substitution happens at that
+ * boundary. So the boundary is drawn as a box that genuinely encloses, rather
+ * than as a label.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -14,23 +14,23 @@ import { useEffect, useRef, useState } from "react";
 const LANGKAH = [
   {
     no: "1",
-    judul: "Contract menyusun permintaan",
-    isi: "Badan permintaan hanya memuat marker seperti {{profile.first_name}}. Contract tidak pernah meminta nilainya, jadi tidak pernah menerimanya.",
+    judul: "The contract assembles the request",
+    isi: "The request body carries only markers such as {{profile.first_name}}. The contract never asks for the values, so it never receives them.",
   },
   {
     no: "2",
-    judul: "Host menyelesaikan marker di dalam enclave",
-    isi: "Penggantian terjadi setelah contract selesai dan sebelum permintaan keluar. Contract yang mencoba membaca ulang badan permintaan hanya menemukan markernya.",
+    judul: "The host substitutes inside the enclave",
+    isi: "Substitution happens after the contract has finished and before the request leaves. A contract that re-reads its own request body finds only the markers.",
   },
   {
     no: "3",
-    judul: "Grant pemilik data menentukan tujuan",
-    isi: "Host tujuan harus tercantum pada grant. Yang tidak tercantum ditolak dengan host/http.egress_denied, dan contract tidak bisa mengizinkan dirinya sendiri.",
+    judul: "The data owner's grant decides the destination",
+    isi: "The destination host must appear on the grant. Anything else is refused with egress_denied, and the contract cannot authorise itself.",
   },
   {
     no: "4",
-    judul: "Bukti terbit dan tertambat",
-    isi: "Nama field, host tujuan, sidik badan, dan kode status diikat satu digest SHA-256. Digest itu ditanam ke Merkle leaf transaksi lewat set-claims-digest.",
+    judul: "The receipt is issued and anchored",
+    isi: "Field names, destination host, body digest, and status code are bound by one SHA-256 digest, planted in the transaction Merkle leaf via set-claims-digest.",
   },
 ];
 
@@ -67,7 +67,7 @@ export function Mechanism() {
           viewBox="0 0 460 300"
           className="w-full min-w-[420px]"
           role="img"
-          aria-label="Alur penerbitan bukti: contract menyusun marker, host menyelesaikannya di dalam enclave, lalu permintaan keluar ke pihak ketiga"
+          aria-label="Receipt issuance flow: the contract assembles markers, the host substitutes them inside the enclave, then the request leaves for the third party"
         >
           {/* Batas enclave */}
           <rect
@@ -89,7 +89,7 @@ export function Mechanism() {
             fill="var(--ns-seal)"
             fontFamily="var(--font-jetbrains-mono), monospace"
           >
-            batas enclave TEE
+            TEE enclave boundary
           </text>
 
           {/* Kotak contract */}
@@ -101,7 +101,7 @@ export function Mechanism() {
             y={146}
             w={226}
             h={52}
-            label="penyelesaian marker"
+            label="marker substitution"
             sub="http-with-placeholders"
             aksen
           />
@@ -110,7 +110,7 @@ export function Mechanism() {
           <Kotak x={168} y={58} w={90} h={54} label="KV" sub="secrets" />
 
           {/* Pihak ketiga di luar batas */}
-          <Kotak x={318} y={146} w={126} h={52} label="pihak ketiga" sub="host di grant" />
+          <Kotak x={318} y={146} w={126} h={52} label="third party" sub="host on grant" />
 
           {/* Merkle leaf */}
           <Kotak x={318} y={58} w={126} h={54} label="Merkle leaf" sub="claims digest" />
@@ -122,7 +122,7 @@ export function Mechanism() {
           <Garis d="M 168 85 L 142 85" jalan={jalan} tunda={260} />
           {/* penyelesai -> pihak ketiga */}
           <Garis d="M 258 172 L 318 172" jalan={jalan} tunda={520} />
-          <Label x={262} y={166} teks="nilai terisi" aksen />
+          <Label x={262} y={166} teks="values filled in" aksen />
           {/* contract -> merkle */}
           <Garis d="M 142 72 L 318 72" jalan={jalan} tunda={780} />
           <Label x={196} y={66} teks="digest" />
@@ -134,7 +134,7 @@ export function Mechanism() {
             fill="var(--ns-muted)"
             fontFamily="var(--font-jetbrains-mono), monospace"
           >
-            di luar enclave
+            outside the enclave
           </text>
 
           <text
@@ -144,7 +144,7 @@ export function Mechanism() {
             fill="var(--ns-muted)"
             fontFamily="var(--font-inter-tight), sans-serif"
           >
-            Nilai profil hanya ada pada anak panah paling kanan bawah.
+            Profile values exist only on the lower-right arrow.
           </text>
           <text
             x="24"
@@ -153,7 +153,7 @@ export function Mechanism() {
             fill="var(--ns-muted)"
             fontFamily="var(--font-inter-tight), sans-serif"
           >
-            Panah itu berangkat dari luar contract, bukan dari dalamnya.
+            That arrow starts outside the contract, not within it.
           </text>
         </svg>
       </div>

@@ -14,35 +14,35 @@ export function SiteFooter() {
               </span>
             </div>
             <p className="mt-3 text-[14px] leading-relaxed text-muted">
-              Dibangun di atas Terminal 3 Agent Developer Kit. Bukti yang
-              diterbitkan bisa dihitung ulang tanpa bantuan kami.
+              Built on the Terminal 3 Agent Developer Kit. Every receipt it
+              issues can be recomputed without our help.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-x-12 gap-y-2 text-[14px]">
-            <Link href="/verifikasi" className="text-muted transition-colors hover:text-ink">
-              Verifikasi receipt
+            <Link href="/verify" className="text-muted transition-colors hover:text-ink">
+              Verify a receipt
             </Link>
-            <Link href="/temuan" className="text-muted transition-colors hover:text-ink">
-              Laporan temuan
+            <Link href="/findings" className="text-muted transition-colors hover:text-ink">
+              Findings report
             </Link>
             <a
               href="https://docs.terminal3.io/developers/adk/overview/what-is-adk"
               className="text-muted transition-colors hover:text-ink"
             >
-              Docs T3 ADK
+              T3 ADK docs
             </a>
             <a
               href="https://github.com/bryankwandou/nullstamp"
               className="text-muted transition-colors hover:text-ink"
             >
-              Repositori
+              Repository
             </a>
           </div>
         </div>
 
         <p className="mt-10 font-mono text-[12px] text-faint">
-          MIT. Contract z:tenant-nullstamp@0.1.0.
+          MIT. Contract z:tenant-nullstamp@0.1.5, live on T3N testnet.
         </p>
       </div>
     </footer>

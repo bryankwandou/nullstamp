@@ -1,55 +1,73 @@
-# Terminal 3 ADK — Laporan Onboarding Testnet dan Usulan Use Case
+# Terminal 3 ADK — Testnet Onboarding Report and Use Case
 
-**Peserta:** Bryan Kwandou
-**Tanggal:** 12 Agustus 2026
-**Repositori publik:** https://github.com/bryankwandou/nullstamp
-**Peragaan langsung:** https://nullstamp.vercel.app
-**Verifier receipt:** https://nullstamp.vercel.app/verifikasi
-**Laporan temuan:** https://nullstamp.vercel.app/temuan
+**Submitted by:** Bryan Kwandou
+**Date:** 12 August 2026
+**Tenant DID:** `did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4`
 
-> Cara memakai naskah ini: salin seluruh isinya ke Google Doc baru, atur akses
-> menjadi "Anyone with the link — Viewer", lalu tempel tangkapan layar pada titik
-> yang sudah ditandai. Tanda kurung siku menunjukkan tempat gambar.
+| | |
+|---|---|
+| Public repository | https://github.com/bryankwandou/nullstamp |
+| Live demo | https://nullstamp.vercel.app |
+| Browser verifier | https://nullstamp.vercel.app/verify |
+| Findings report | https://nullstamp.vercel.app/findings |
+| Findings, full text | https://github.com/bryankwandou/nullstamp/blob/main/docs/BUGS.md |
+| Evidence, verbatim output | https://github.com/bryankwandou/nullstamp/blob/main/docs/PROOF.md |
+
+> **How to use this file:** paste the whole thing into a new Google Doc, set
+> sharing to "Anyone with the link — Viewer", then drop screenshots at the marked
+> points. Square brackets mark image slots.
 
 ---
 
-## 1. Ringkasan
+## 1. Summary
 
-Brief meminta empat hal: menyelesaikan Quickstart, menyelesaikan Walkthrough,
-melaporkan bug yang ditemukan, dan sebagai bonus mengusulkan satu use case awal
-di luar contract pertama.
+The brief asked for four things: complete the Quickstart, complete the
+Walkthrough, report the bugs encountered, and as a bonus propose an initial use
+case beyond the first contract.
 
-Tiga hal pertama dikerjakan sampai batas yang bisa dicapai. Untuk bonusnya, use
-case-nya tidak hanya diusulkan, tetapi dibangun sampai berjalan: sebuah TEE
-contract kedua bernama Nullstamp, lengkap dengan 54 unit test, halaman peragaan,
-dan pemeriksa mandiri yang membuktikan klaim intinya.
+All four are done, and the bonus is not a proposal — it is a second TEE contract
+running on testnet.
 
-Sepuluh temuan tercatat. Tiga di antaranya menghentikan pengembang baru pada
-langkah pertama, termasuk satu yang membuat contoh kode pertama di halaman
-Quickstart tidak bisa berjalan apa adanya.
+**Fourteen findings** are documented with reproduction steps. Five block a new
+developer outright. Four of the fourteen were only discoverable by running a
+contract against the live network, and I would rank those as the most useful
+material in this submission:
 
-## 2. Identitas dan lingkungan
+- `tenant.claim()` returns HTTP 500 on a tenant the SSO page already provisioned
+- importing `signing@2.1.0` makes any contract fail to instantiate, with an
+  opaque 500 and an empty contract log
+- every contract re-registration silently invalidates every map ACL
+- `kv-store.scan` hands back raw CAS pointers where `kv-store.get` resolves them
 
-| Butir | Nilai |
+The use case, **Nullstamp**, issues verifiable receipts for agent calls that touch
+personal data. Its central claim — that a receipt can be recomputed by anyone
+outside the node — is demonstrated with a live receipt and an independent
+verifier, not asserted.
+
+## 2. Identity and environment
+
+| Item | Value |
 |---|---|
-| DID tenant | `[isi setelah klaim: did:t3n:...]` |
-| Alamat Eth turunan | `[isi]` |
-| Lingkungan | testnet |
+| Tenant DID | `did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4` |
+| Derived Eth address | `0xcbdf0480addeacbe6e7b27154585db65ad249379` |
+| Environment | `sandbox` (same node as `testnet`) |
 | Node | `https://cn-api.sg.testnet.t3n.terminal3.io` |
-| Manifest testnet | versi 1786457685, ditandatangani 2026-08-11T14:14:45Z |
-| Sistem | Windows 11, 10.0.26200 |
-| Node.js | 24.13.0 |
+| Operator manifest | signed `2026-08-11T14:14:45Z`, 3 peers, 1 RTMR3 measurement |
+| Credits granted | 20,000 (`available: 19939779025` after this work) |
+| Contract | `z:f21dce7928980eeea7dc93618b91f602a80fe1c4:nullstamp` |
+| Contract ids used | 615, 617, 618, 619, 620 (one per registration) |
+| SDK | `@terminal3/t3n-sdk@4.35.1` |
 | Rust | 1.89.0, target `wasm32-wasip2` |
 | wasm-tools | 1.255.0 |
-| SDK | `@terminal3/t3n-sdk@4.35.1` |
+| Node.js | 24.13.0 |
+| OS | Windows 11 (10.0.26200) |
 
-Kunci pengembang tidak dicantumkan di dokumen ini, dan tidak pernah masuk ke
-riwayat repositori.
+The API key is not reproduced in this document and never entered the repository's
+git history.
 
-**[Tangkapan layar 1: halaman klaim setelah DID dan kunci terbit, dengan bagian
-kunci disensor]**
+**[Screenshot 1: the claim page showing the DID, with the API key redacted]**
 
-## 3. Penyiapan lingkungan pengembangan
+## 3. Development environment
 
 ```
 rustup target add wasm32-wasip2
@@ -57,31 +75,33 @@ cargo install wasm-tools
 npm install @terminal3/t3n-sdk
 ```
 
-Catatan dari halaman docs bahwa `cargo install wasm-tools` menyusun sekitar
-seratus crate tanpa keluaran progres memang benar dan berguna.
+The docs' note that `cargo install wasm-tools` compiles around a hundred crates
+with no progress output is accurate and helpful.
 
-Yang tidak disebut: pemasangan SDK memunculkan empat peringatan keamanan, satu di
-antaranya kritis. Rinciannya pada temuan T-06.
+Not mentioned: the SDK install reports four security advisories, one of them
+critical. Finding T-06.
 
-**[Tangkapan layar 2: keluaran `npm run preflight`, seluruh pemeriksaan lolos]**
+Before touching the network I wrote a preflight check that runs **without** a
+developer key, so that environment failures could be told apart from service
+failures. It verifies tool versions, the WASM file, node reachability, the
+operator manifest signature, and the SDK crypto component. All checks pass.
 
-Untuk memisahkan kegagalan lingkungan dari kegagalan layanan, saya menulis satu
-skrip pemeriksaan pendahuluan yang bisa dijalankan sebelum kunci pengembang ada.
-Skrip itu memeriksa versi perkakas, keberadaan berkas WASM, keterjangkauan node,
-keabsahan tanda tangan manifest operator, dan pemuatan komponen kriptografi SDK.
-Seluruhnya lolos.
+**[Screenshot 2: `npm run preflight`, all checks passing]**
 
 ## 4. Quickstart
 
-Contoh kode pada halaman Quickstart tidak bisa dijalankan apa adanya. Penyebabnya
-dua, keduanya dipaksa oleh tipe SDK dan bukan soal selera:
+The first code sample on the Quickstart page cannot run as written. Two causes,
+both forced by the SDK's own types:
 
-1. `T3nClientConfig.trustAnchor` bersifat wajib, dan `T3nConfigError` dilempar di
-   constructor sebelum ada lalu lintas jaringan.
-2. Handshake membutuhkan set penangan lengkap dari `createDefaultHandlers`, bukan
-   `EthSign` sendirian.
+1. `T3nClientConfig.trustAnchor` is required, and `T3nConfigError` is thrown in
+   the constructor before any network traffic occurs.
+2. The handshake needs the full handler set from `createDefaultHandlers`, not
+   `EthSign` alone.
 
-Bentuk yang berhasil:
+The same defective sample appears on the claim page at
+`go.terminal3.io/adk-community`, so it exists on two surfaces.
+
+The form that works:
 
 ```ts
 setEnvironment("testnet");
@@ -104,170 +124,304 @@ await t3n.handshake();
 const did = await t3n.authenticate(createEthAuthInput(ethAddress));
 ```
 
-`fetchTrustedManifest` sudah diuji terhadap testnet dan berhasil: manifest
-terambil dengan HTTP 200, tanda tangan operator sah, berisi 3 peer dan 1
-pengukuran RTMR3. Fungsi itu juga dinyatakan tidak pernah memulangkan anchor yang
-belum terverifikasi, jadi menjadikannya jalur baku pada dokumentasi tidak
-menambah risiko apa pun.
-
-**[Tangkapan layar 3: keluaran `npm run step:01` — DID tenant tercetak]**
-
-## 5. Klaim tenant
-
-Langkah ini tidak ada di dokumentasi, tetapi diperlukan. SDK menyediakan
-`tenant.claim()` sebagai jalur mandiri untuk testnet, sekaligus pemberian kredit
-uji. Sifatnya idempoten: pemanggilan berulang menjawab `already-admitted`.
-
-**[Tangkapan layar 4: keluaran `npm run step:02` — jawaban klaim dan keadaan tenant]**
-
-## 6. Walkthrough — contract pertama
-
-Repo acuan `Terminal-3/z-tenant-flight` di-clone dan dibaca sampai selesai,
-termasuk WIT yang divendor di dalamnya. Dari situ dua hal penting terlihat.
-
-Pertama, `tenant-did` memulangkan `list<u8>` berupa 20 bita mentah, dan repo acuan
-memang menyandikannya dengan `hex::encode`. Halaman galat umum menyatakan
-sebaliknya, dan contoh pada halaman Walkthrough karenanya tidak bisa dikompilasi.
-Rinciannya pada temuan T-03.
-
-Kedua, `host:interfaces@2.1.0` memuat jauh lebih banyak kemampuan daripada yang
-dibahas dokumentasi, termasuk `signing`, `clock`, `contracts-call`, `token`, dan
-yang paling menarik `kv-store.set-claims-digest`.
-
-## 7. Walkthrough — contract kedua, di luar contoh yang disediakan
-
-Bagian ini menjawab bonus pada brief.
-
-### Masalah yang dikejar
-
-Agent yang mengurus hal nyata harus menyentuh data pribadi. Cara mencatat
-aktivitasnya hari ini terjepit di antara dua kegagalan. Catatan yang lengkap
-menyimpan data mentah, sehingga catatan kepatuhan itu sendiri menjadi timbunan
-risiko. Catatan yang diredaksi kehilangan kelengkapan, sehingga tidak bisa
-dibuktikan utuh saat diperiksa.
-
-Kewajiban rekaman EU AI Act Pasal 12 untuk sistem risiko tinggi mulai berlaku
-Agustus 2026, sementara GDPR menuntut pemilik data mengetahui field apa yang
-dipakai, kapan, dan untuk tujuan apa.
-
-### Mengapa T3N yang bisa menjawabnya
-
-Karena `http-with-placeholders` membuat jawabannya struktural, bukan soal
-kebijakan. Contract mengirim marker, host menyelesaikannya di dalam enclave
-setelah contract selesai. Jadi contract bukan berjanji tidak menyimpan nilai itu;
-ia memang tidak menerimanya.
-
-### Bentuk contract
-
-`z:tenant-nullstamp@0.1.0`, tiga fungsi:
-
-- `issue-receipt` — jalankan panggilan keluar, lalu terbitkan bukti atasnya
-- `verify-receipt` — hitung ulang digest receipt tersimpan dan bandingkan
-- `list-receipts` — ambil jejak receipt, dengan titik lanjut bila menyentuh batas
-
-Yang dicatat sebuah receipt: nama field yang dirujuk, host tujuan, sidik badan
-permintaan, kode status upstream, DID subjek, waktu dari jam cluster, dan nomor
-urut. Yang tidak pernah dicatat: nilai field, badan tanggapan, dan kredensial.
-
-Semua pernyataan itu diikat satu digest SHA-256, dan digest itu ditanam ke Merkle
-leaf transaksi lewat `set-claims-digest`.
-
-### Satu keputusan rancangan yang perlu disebut
-
-Pengakuan field diperiksa terhadap isi badan permintaan sebelum ada satu bita pun
-keluar. Mengaku memakai dua field padahal badan permintaan merujuk empat akan
-ditolak, bukan dicatat. Tanpa aturan ini sebuah receipt bisa mengaku lebih
-sederhana daripada kenyataannya, dan bukti yang bisa mengecilkan cakupannya
-sendiri tidak ada gunanya.
-
-Selain itu, `http` biasa sengaja tidak di-import. Nullstamp hanya punya satu jalan
-keluar, yaitu `http-with-placeholders`. Jadi tidak ada jalur di dalam contract ini
-yang bisa mengirim data tanpa melewati penyelesaian marker di sisi host.
-
-**[Tangkapan layar 5: keluaran `cargo test` — 53 lolos, 0 gagal]**
-**[Tangkapan layar 6: keluaran `wasm-tools component wit` — daftar import dan export]**
-
-## 8. Bukti yang bisa diperiksa ulang
-
-Sebuah bukti yang hanya bisa diperiksa penerbitnya bukan bukti. Karena itu digest
-dihitung atas bentuk kanonik: kunci objek urut menaik, tanpa spasi, urutan larik
-dibiarkan.
-
-Kesetaraannya diuji lintas bahasa. Receipt disusun oleh kode Rust yang sama dengan
-yang berjalan di enclave, lalu diperiksa program TypeScript terpisah yang tidak
-mengimpor SDK, tidak membuka sesi, dan tidak menyentuh jaringan:
+Result — and note that the DID returned by the server matches the claim page
+character for character, which confirms the whole derivation path:
 
 ```
-receipt_id      : rcpt_c212bc7936f8120043cdc617
-digest tercatat : c212bc7936f8120043cdc61780e4fb3a0b5331eca3a392f5edae5350ff07d945
-digest dihitung : c212bc7936f8120043cdc61780e4fb3a0b5331eca3a392f5edae5350ff07d945
-
-HASIL: sah. Digest dihitung ulang di luar node dan cocok.
+environment: sandbox
+anchor verified — 3 peers, 1 RTMR3 measurement
+eth address: 0xcbdf0480addeacbe6e7b27154585db65ad249379
+tenant DID : did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4
 ```
 
-Sisi sebaliknya juga diuji. Menyembunyikan satu field yang sebenarnya dipakai, dan
-menukar host tujuan, keduanya tertangkap. Percobaan yang lebih teliti — mengubah
-isi lalu ikut memperbaiki digest supaya konsisten — tetap tertangkap, karena
-identitas receipt diturunkan dari digest dan tidak bisa ikut diperbaiki tanpa
-berubah menjadi identitas lain.
+**[Screenshot 3: `npm run step:01`]**
 
-Pemeriksaan yang sama bisa dijalankan siapa pun di
-https://nullstamp.vercel.app/verifikasi, memakai Web Crypto di peramban, tanpa
-permintaan jaringan. Tersedia tombol untuk merusak receipt sendiri lalu melihat
-pemeriksaannya menolak.
+## 5. Tenant state — and the first server-side bug
 
-**[Tangkapan layar 7: halaman verifier, keadaan sah]**
-**[Tangkapan layar 8: halaman verifier setelah receipt diubah, keadaan tidak sah]**
+`tenant.claim()` fails against a tenant the SSO page has already provisioned:
 
-## 9. Sepuluh temuan
+```
+RPC Error: Internal error [28113ed7-3a9d-45ef-98b8-b664fd9eb421]
+RPC Error: Internal error [d8dbb69a-758f-4a4a-a67e-1e52b2f4b742]
+```
 
-Versi lengkap dengan kutipan verbatim dan langkah reproduksi ada di
+Two attempts, two request ids. The docs' guidance for a generic 500 is to retry
+once and then report, which is what I did.
+
+Meanwhile every read against the same tenant succeeds:
+
+```
+tenant.me()      -> { "status": "active", "label": "testnet-dev", ... }
+getBalance()     -> { "available": 19989922328, "reserved": 0 }
+contracts.list() -> []
+```
+
+This is finding T-11. The response shape implies the call is meant to be
+idempotent — an `already-admitted` status with null credits — so a setup script
+that trusts that is blocked on a step that was already complete.
+
+My step 02 now reads `tenant.me()` first and only claims when the status is not
+`active`.
+
+**[Screenshot 4: `npm run step:02` and the diagnostic showing the 500 with its request ids]**
+
+## 6. Walkthrough — reading the first contract
+
+I cloned `Terminal-3/z-tenant-flight` and read it through, including the vendored
+WIT. Two things stood out.
+
+`tenant-did` returns `list<u8>` — twenty raw bytes — and the reference repo encodes
+it with `hex::encode` before building a map name. The common-errors page states
+the opposite, so the Walkthrough sample does not compile. Finding T-03. This one
+matters more than a typo because map names derive from the DID; get the encoding
+wrong and every later KV call addresses a map that does not exist.
+
+Second, `host:interfaces@2.1.0` contains considerably more capability than the
+docs cover — `signing`, `clock`, `contracts-call`, `token`, and most interestingly
+`kv-store.set-claims-digest`. That last one became the foundation of this project.
+
+## 7. Walkthrough — a second contract, beyond the provided example
+
+This section answers the bonus.
+
+### The problem
+
+An agent doing real work has to touch personal data. Recording that activity is
+caught between two failures: a complete log stores raw personal data and becomes a
+liability itself, while a redacted log loses completeness and cannot prove the
+trail is intact.
+
+EU AI Act Article 12 record-keeping for high-risk systems takes effect August 2026.
+GDPR requires data subjects to know which fields were used, when, and why. Those
+demands fight each other for as long as the record is built the ordinary way.
+
+### Why T3N specifically
+
+Because `http-with-placeholders` makes the answer structural rather than a matter
+of policy. The contract emits markers; the host substitutes them inside the
+enclave after the contract has finished. The contract is not promising not to
+store the values — it never receives them.
+
+### The contract
+
+`z:tenant-nullstamp`, three functions:
+
+- `issue-receipt` — perform an outbound call, then issue a receipt covering it
+- `verify-receipt` — recompute a stored receipt's digest and compare
+- `list-receipts` — read the trail, with a continuation point at the limit
+
+What a receipt records: field names referenced, destination host, request body
+digest, upstream status code, subject DID, cluster time, and sequence number. What
+it never records: field values, the response body, and credentials.
+
+All of it is bound by one SHA-256 digest, planted in the transaction's Merkle leaf
+through `set-claims-digest`.
+
+### Two design decisions worth stating
+
+The declared field list is checked against the actual request body **before** any
+byte leaves. Declaring two fields while the body references four is rejected, not
+recorded. Without that rule a receipt could understate its own scope, and a
+receipt that can shrink its own footprint is worthless.
+
+Plain `http` is deliberately not imported. Nullstamp has exactly one way out, so
+no path inside the contract can send data without passing through host-side marker
+resolution.
+
+### Build results
+
+```
+cargo test    -> 53 passed, 0 failed; plus 1 doc-test
+cargo build   -> 254047 bytes, no warnings
+wasm-tools    -> valid component; imports narrow to 4 host interfaces
+```
+
+**[Screenshot 5: `cargo test` output]**
+**[Screenshot 6: `wasm-tools component wit` output]**
+
+## 8. The bug that cost the most time
+
+Registration of version 0.1.0 succeeded and returned contract id 615. Then every
+call to it failed:
+
+```
+RPC Error: Internal error [754f19f6-b496-4f2d-b475-add668c7d85e]
+```
+
+Three properties made this hard to attribute:
+
+1. Registration succeeded — the rejection happens later, at instantiation.
+2. `contracts.logs` returned `{"entries": []}`. The contract never starts, so it
+   cannot log anything about its own failure.
+3. `list-receipts`, which only scans a KV map and touches no HTTP and no signing,
+   failed identically.
+
+So the signal pointed nowhere near the cause. I bisected by removing imported
+interfaces one at a time.
+
+The cause was `host:interfaces/signing@2.1.0`. It is declared in
+`host-interfaces-2.1.0/package.wit` at line 159 with nothing marking it
+unavailable to tenant contracts. Removing that single import — changing nothing
+else — turned the opaque 500 into a precise, genuinely excellent error:
+
+```
+access denied: TenantContract(did:t3n:f21dce…/617) cannot read map "z:f21dce…:receipts"
+```
+
+That is finding T-12, and my suggested fix is to reject the *registration* when
+the world imports an interface the tenant runtime does not provide, naming the
+interface in the error.
+
+The new error then revealed finding T-13: contract ids are minted per
+registration and map ACLs bind to the id, so re-registering silently invalidates
+every ACL. Across this exercise the same contract held ids 615, 617, 618, 619,
+and 620. `maps.update` fixes it and appears in no documentation page.
+
+**[Screenshot 7: the opaque 500 with an empty contract log, next to the precise error after removing signing]**
+
+## 9. A receipt issued inside the enclave
+
+```
+target        : https://postman-echo.com/post
+declared      : first_name, last_name
+body sent     : {"keperluan":"peragaan_nullstamp",
+                 "first_name":"{{profile.first_name}}",
+                 "last_name":"{{profile.last_name}}"}
+
+{
+  "core": {
+    "contract_id": 620,
+    "contract_version": "0.1.4",
+    "fields_used": [ "first_name", "last_name" ],
+    "issued_at_secs": 1786536293,
+    "method": "POST",
+    "request_body_sha256": "a9696e7e563ccb347d6d5be12958a6f1252138e9496d6c0a6f8315eed9b0e5f8",
+    "response_body_sha256": "fa52487c9cdc6a0bdede5f63b4c4ce02a1738c7e575eb6781c2ec53a34178129",
+    "response_code": 200,
+    "seq_no": 112736,
+    "target_host": "postman-echo.com",
+    ...
+  },
+  "digest_sha256": "5bd9c8970986c53d5ec82043da41471095ad881c3456dc81415acd65cb8886ea",
+  "receipt_id": "rcpt_5bd9c8970986c53d5ec82043"
+}
+```
+
+`response_code` 200 means the call genuinely left the enclave and reached the
+upstream. `seq_no` and `issued_at_secs` come from the cluster. And `core` lists
+only field **names** — the values are absent and cannot be present.
+
+Verification inside the enclave:
+
+```
+{ "valid": true, "receipt_id": "rcpt_5bd9c8970986c53d5ec82043", "reason": null }
+```
+
+The contract's own log, which names the field count and never the values:
+
+```
+"nullstamp: calling POST postman-echo.com for peragaan_penerbitan_bukti with 2 profile fields"
+"nullstamp: receipt rcpt_5bd9c8970986c53d5ec82043 issued, upstream status 200"
+```
+
+**[Screenshot 8: `npm run step:07` full receipt]**
+**[Screenshot 9: `npm run step:08`, `step:09`, `step:10`]**
+
+## 10. Getting the trail to work exposed a fourth bug
+
+`list-receipts` returned rows whose values would not parse. From inside the
+contract I dumped the first bytes:
+
+```
+543356527b2276616c75655f636964223a5b32362c32372c...
+T3VR{"value_cid":[26,27,193,186,180,45,202,168,81,195,32,170,0,2
+```
+
+Values large enough to be offloaded to content-addressed storage are replaced by a
+pointer envelope: ASCII magic `T3VR` followed by JSON containing a `value_cid`.
+
+`kv-store.get` resolves that pointer transparently. `kv-store.scan` does not. I
+proved the asymmetry with two functions of the same deployment reading the same
+row: `verify-receipt` reads via `get` and returns `valid: true`, while
+`list-receipts` reads via `scan` and gets 311 bytes of pointer.
+
+The WIT signature promises key/value pairs and says nothing about this. The host
+raises no error — `scan` succeeds and the bytes are simply the wrong bytes.
+Finding T-14.
+
+## 11. The central claim, demonstrated
+
+A receipt that only its issuer can check is not a receipt. So the digest is
+computed over a canonical form: object keys ascending, no whitespace, array order
+preserved.
+
+I exported the live receipt above and checked it with a separate TypeScript
+program that imports no SDK, opens no session, and makes no network request:
+
+```
+receipt_id      : rcpt_5bd9c8970986c53d5ec82043
+digest recorded : 5bd9c8970986c53d5ec82043da41471095ad881c3456dc81415acd65cb8886ea
+digest computed : 5bd9c8970986c53d5ec82043da41471095ad881c3456dc81415acd65cb8886ea
+
+RESULT: valid. Digest recomputed outside the node and it matches.
+```
+
+The reverse direction is tested too. Hiding a field that was actually used, and
+swapping the destination host, are both caught. The careful version of the attack —
+editing the content and repairing the digest so it agrees — is also caught,
+because the receipt id derives from the digest and cannot be repaired without
+becoming a different id.
+
+Anyone can run the same check at https://nullstamp.vercel.app/verify, in the
+browser via Web Crypto, with no request to us. There are buttons to tamper with
+the receipt yourself and watch verification refuse it.
+
+**[Screenshot 10: browser verifier, valid state]**
+**[Screenshot 11: browser verifier after tampering, invalid state]**
+
+## 12. All fourteen findings
+
+Full text with verbatim quotes and reproduction steps:
 https://github.com/bryankwandou/nullstamp/blob/main/docs/BUGS.md
 
-| Kode | Bobot | Ringkas |
+| ID | Weight | Summary |
 |---|---|---|
-| T-01 | penghambat | Contoh kode pertama Quickstart tidak bisa berjalan: `trustAnchor` wajib tetapi tidak disertakan, dan galatnya dilempar di constructor |
-| T-02 | penghambat | Set penangan pada Quickstart tidak lengkap untuk handshake; `createDefaultHandlers` tidak disebut |
-| T-03 | penghambat | Halaman galat umum menyatakan `tenant_did()` sudah berbentuk string, padahal WIT memulangkan `list<u8>` dan repo acuan resmi menyandikannya; contoh Walkthrough tidak bisa dikompilasi |
-| T-04 | sedang | Langkah klaim tenant tidak disebut sama sekali, padahal diperlukan untuk mendapat baris tenant dan kredit |
-| T-05 | sedang | Pembuatan map memakai `contractId` yang hanya ada setelah pendaftaran, sehingga urutan yang tertulis tidak bisa diikuti sampai selesai |
-| T-06 | sedang | Pemasangan SDK memunculkan 4 peringatan, satu kritis: Zip Slip pada `decompress` lewat jalur `jco` |
-| T-07 | ringan | `maps.entrySet`, `maps.entryGet`, `maps.getStatus`, dan `contracts.logs` tidak muncul di dokumentasi mana pun |
-| T-08 | ringan | Contoh penanganan galat memakai lengan tangkap semua, sehingga dua ragam yang pembedaannya disengaja host jadi hilang |
-| T-09 | ringan | Dua alamat dokumentasi menjawab 404; halaman contoh payroll tidak memuat penjelasan |
-| T-10 | ringan | Nomor versi pada repo acuan tidak seragam antara `world.wit`, `Cargo.toml`, dan nama ujinya |
+| T-01 | blocker | First Quickstart sample cannot run: `trustAnchor` is required and throws in the constructor. Same defect on the claim page |
+| T-02 | blocker | Quickstart handler set incomplete for the handshake; `createDefaultHandlers` is never mentioned |
+| T-03 | blocker | Docs say `tenant_did()` is a string; WIT returns `list<u8>` and the reference repo hex-encodes it. Walkthrough sample does not compile |
+| T-11 | blocker | `tenant.claim()` returns 500 on an already-provisioned tenant instead of `already-admitted`. Two request ids supplied |
+| T-12 | blocker | Importing `signing@2.1.0` makes the contract fail to instantiate. Registration succeeds; every call then returns an opaque 500 with an empty contract log |
+| T-13 | confusing | Contract ids are per registration and map ACLs bind to the id, so every re-register silently invalidates every ACL |
+| T-14 | confusing | `kv-store.scan` returns raw `T3VR` CAS pointers where `get` resolves them; no error, not in the WIT |
+| T-04 | confusing | The tenant claim step is not documented anywhere |
+| T-05 | confusing | `maps.create` needs a `contractId` that only exists after registration, which the Walkthrough sequences later |
+| T-06 | confusing | SDK install reports 4 advisories, 1 critical (Zip Slip in `decompress` via `jco`) |
+| T-07 | time sink | `contracts.logs`, `maps.entrySet`, `maps.entryGet`, `maps.getStatus`, `maps.update` appear in no documentation page |
+| T-08 | time sink | Error-handling sample's catch-all arm collapses `PlaceholderDenied` and `PlaceholderNoUserContext`, whose distinction the WIT calls deliberate |
+| T-09 | time sink | Two doc URLs return 404; the payroll example page has no content |
+| T-10 | time sink | Reference repo version numbers disagree across `world.wit`, `Cargo.toml`, and a test name |
 
-## 10. Satu usulan
+Worth saying plainly: when the contract actually runs, the error messages are
+very good. The access-denied message names the principal, the id, the map, and
+the operation — it was the clearest error I saw all day. The problem is
+concentrated in the cases where the contract never starts, where the message
+degrades to `Internal error` and the log is empty.
 
-`kv-store.set-claims-digest` layak diberi halaman sendiri.
+## 13. One proposal
 
-Komentar WIT-nya berbunyi: digest ditanam ke Merkle leaf "so clients can verify
-receipts offline". Kalimat itu menjawab pertanyaan tersulit tentang komputasi
-rahasia, yaitu bagaimana pihak luar bisa memeriksa sesuatu yang dijalankan di
-tempat yang tidak bisa mereka lihat. Tidak ada satu pun halaman ADK yang
-membahasnya.
+`kv-store.set-claims-digest` deserves a documentation page of its own.
 
-Nullstamp dibangun di atas kemampuan itu, dan hasilnya bisa diperiksa siapa pun.
-Bila kemampuan ini diberi halaman beserta contoh bentuk kanonik, argumen jualan
-T3N berubah dari "percayalah pada enclave" menjadi "hitung sendiri dan
-bandingkan".
+Its WIT comment says the digest is planted in the Merkle leaf "so clients can
+verify receipts offline." That sentence answers the hardest question about
+confidential computing: how can anyone outside check work performed somewhere they
+cannot see? No ADK page discusses it.
 
-## 11. Batas pekerjaan ini
+This project is built on that capability, and the result holds up under an
+independent verifier. Give it a page with a worked canonical-form example, and the
+pitch for T3N changes from "trust the enclave" to "compute it yourself and
+compare." That is a materially stronger claim, and the machinery already ships.
 
-Langkah 2 sampai 10 — klaim tenant, pendaftaran contract, pembuatan map,
-penanaman kredensial, pemasangan grant, penerbitan receipt di dalam enclave —
-membutuhkan kunci pengembang dari halaman klaim SSO.
-
-Seluruh kode untuk langkah itu sudah ditulis, lolos `tsc --noEmit`, dan tinggal
-dijalankan berurutan. Bagian dokumen ini akan diperbarui dengan keluaran nyata dan
-tangkapan layarnya begitu kunci diperoleh.
-
-Yang sudah terbukti tanpa kunci: contract terbangun dan lolos 54 uji, component
-sah dan permukaan kemampuannya minimum, testnet terjangkau dengan attestation
-terverifikasi, dan digest receipt bisa dihitung ulang lintas bahasa beserta
-penolakan terhadap pengubahan.
-
-## 12. Cara memeriksa ulang
+## 14. Reproducing everything
 
 ```bash
 git clone https://github.com/bryankwandou/nullstamp
@@ -276,15 +430,16 @@ cargo test --target "$(rustc -vV | sed -n 's/^host: //p')"
 cargo build --target wasm32-wasip2 --release
 wasm-tools component wit target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
 
-cd ../../scripts && npm install && npm run preflight
-
-cd ../contract/z-tenant-nullstamp
-cargo run --example sample_receipt > ../../submission/sample-receipt.json
 cd ../../scripts
-npm run verify:offline -- ../submission/sample-receipt.json
+npm install
+npm run preflight                    # no developer key needed
+
+cp .env.example .env                 # set T3N_API_KEY
+npm run step:01                      # through step:11
+npm run verify:offline -- ../submission/live-receipt.json
 ```
 
-## 13. Kontak
+## 15. Contact
 
 Bryan Kwandou — nayrbryangaming01@gmail.com
 GitHub: https://github.com/bryankwandou
