@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Nullstamp">
+  <title>Nullstamp</title>
+  <!--
+    Tanda Nullstamp: lambang himpunan kosong yang dibaca sebagai cap segel.
+
+    Cincinnya sengaja terpotong dua kali di titik silang, jadi bentuknya
+    menyerupai bekas cap yang tintanya tidak rata alih-alih lingkaran mesin.
+    Palang diagonal memakai warna vermilion, mengambil rujukan tinta segel;
+    cincinnya memakai currentColor sehingga ikut warna teks di sekitarnya dan
+    tetap terbaca di latar terang maupun gelap.
+
+    Bobot garis 3.25 pada kanvas 32 membuat tanda ini masih utuh saat dikecilkan
+    ke 16 piksel.
+  -->
+  <defs>
+    <mask id="ns-cut">
+      <rect width="32" height="32" fill="#fff"/>
+      <line x1="7" y1="25" x2="25" y2="7" stroke="#000" stroke-width="7.6" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="3.25" mask="url(#ns-cut)"/>
+  <line x1="7.6" y1="24.4" x2="24.4" y2="7.6" stroke="#D6452C" stroke-width="3.25" stroke-linecap="round"/>
+</svg>

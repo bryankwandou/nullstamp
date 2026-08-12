@@ -1,0 +1,80 @@
+/// z-tenant-nullstamp WIT world — verifiable consent receipts for agent calls.
+///
+/// Nullstamp menerbitkan bukti untuk setiap panggilan pihak ketiga yang
+/// menyentuh data pribadi seseorang. Bukti itu menyebut field apa yang dirujuk,
+/// ke host mana dikirim, dan hasilnya — tanpa pernah memuat nilai field-nya.
+///
+/// Host capability yang dipakai:
+///   - tenant-context:         tenant DID, contract id, calling user DID,
+///                             cluster timestamp, seq no
+///   - logging:                jejak eksekusi tanpa PII
+///   - kv-store:               simpan receipt, plus set-claims-digest yang
+///                             menempelkan digest ke Merkle leaf sehingga
+///                             receipt bisa diverifikasi di luar node
+///   - http-with-placeholders: panggilan keluar yang membawa marker
+///                             `{{profile.<field>}}`; host menyelesaikannya di
+///                             dalam enclave, jadi plaintext tidak pernah masuk
+///                             memori WASM
+///   - signing:                tanda tangan secp256k1 tingkat cluster atas
+///                             receipt kanonik. Bersifat opsional: bila
+///                             capability ini tidak diberikan, receipt tetap
+///                             terbit dengan anchor claims-digest saja.
+package z:tenant-nullstamp@0.1.0;
+
+world tenant-nullstamp {
+    import host:tenant/tenant-context@1.0.0;
+    import host:interfaces/logging@2.1.0;
+    import host:interfaces/kv-store@2.1.0;
+    import host:interfaces/http-with-placeholders@2.1.0;
+    import host:interfaces/signing@2.1.0;
+
+    export contracts;
+}
+
+interface contracts {
+    /// Envelope tiga field yang dipakai semua contract yang dipanggil node.
+    /// `input`        — payload JSON spesifik per fungsi.
+    /// `user-profile` — selalu None untuk tenant contract.
+    /// `context`      — DynamicContext JSON yang dicetak node.
+    record generic-input {
+        input:        option<list<u8>>,
+        user-profile: option<list<u8>>,
+        context:      option<list<u8>>,
+    }
+
+    /// Jalankan satu panggilan keluar memakai marker profil, lalu terbitkan
+    /// receipt atas panggilan itu.
+    ///
+    /// Input (JSON):
+    /// {
+    ///   "purpose":        "flight_booking",
+    ///   "method":         "POST",
+    ///   "url":            "https://api.duffel.com/air/orders",
+    ///   "headers":        [["Accept","application/json"]],
+    ///   "declared_fields":["first_name","last_name"],
+    ///   "body_template":  { "given_name": "{{profile.first_name}}" },
+    ///   "secret_key":     "duffel_api_key"
+    /// }
+    ///
+    /// `declared_fields` harus sama persis dengan marker profil yang muncul di
+    /// `body_template`. Selisih apa pun ditolak sebelum ada panggilan keluar,
+    /// supaya receipt tidak bisa mengaku lebih sedikit dari yang sebenarnya
+    /// dipakai.
+    ///
+    /// Output (JSON): receipt lengkap beserta digest dan tanda tangan.
+    issue-receipt: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// Hitung ulang digest receipt yang tersimpan dan bandingkan dengan digest
+    /// yang tercatat saat penerbitan.
+    ///
+    /// Input  (JSON): { "receipt_id": "rcpt_..." }
+    /// Output (JSON): { "valid": bool, "receipt_id": string, "digest": string,
+    ///                  "reason": option<string> }
+    verify-receipt: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// Ambil jejak receipt milik tenant ini, urut menaik menurut receipt id.
+    ///
+    /// Input  (JSON): { "start": option<string>, "limit": u32 }
+    /// Output (JSON): { "receipts": [...], "count": u32 }
+    list-receipts: func(req: generic-input) -> result<list<u8>, string>;
+}

@@ -1,0 +1,29 @@
+{
+  "core": {
+    "contract_id": 41,
+    "contract_version": "0.1.0",
+    "extracted_pointers": [
+      "/json/keperluan"
+    ],
+    "fields_used": [
+      "first_name",
+      "last_name"
+    ],
+    "issued_at_secs": 1786457685,
+    "method": "POST",
+    "purpose": "peragaan_penerbitan_bukti",
+    "request_body_sha256": "7d3a1f0c9b8e6d5a4c3b2a1908f7e6d5c4b3a2910f8e7d6c5b4a39281706f5e4d",
+    "response_body_sha256": "1a2b3c4d5e6f70819293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c4d5e6f7081",
+    "response_code": 200,
+    "schema": "nullstamp.receipt.v1",
+    "seq_no": 10482,
+    "subject_did": "3c5d7e9f001122334455667788990aabbccddeef",
+    "target_host": "postman-echo.com",
+    "target_url": "https://postman-echo.com/post",
+    "tenant_did": "9f2a4c7b1e5d8a3f6b0c2d4e6f8a1b3c5d7e9f00"
+  },
+  "digest_sha256": "c212bc7936f8120043cdc61780e4fb3a0b5331eca3a392f5edae5350ff07d945",
+  "receipt_id": "rcpt_c212bc7936f8120043cdc617",
+  "signature": null,
+  "signing_error": "capability signing tidak diberikan pada contract ini"
+}

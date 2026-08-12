@@ -1,0 +1,32 @@
+{
+  "name": "@nullstamp/scripts",
+  "version": "0.1.0",
+  "description": "Langkah onboarding T3N ADK dan pengelolaan contract Nullstamp",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "step:01": "tsx src/01-quickstart.ts",
+    "step:02": "tsx src/02-claim-tenant.ts",
+    "step:03": "tsx src/03-register-contract.ts",
+    "step:04": "tsx src/04-create-maps.ts",
+    "step:05": "tsx src/05-seed-secret.ts",
+    "step:06": "tsx src/06-grant-agent.ts",
+    "step:07": "tsx src/07-issue-receipt.ts",
+    "step:08": "tsx src/08-verify-receipt.ts",
+    "step:09": "tsx src/09-list-receipts.ts",
+    "step:10": "tsx src/10-contract-logs.ts",
+    "verify:offline": "tsx src/verify-offline.ts",
+    "preflight": "tsx src/preflight.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@terminal3/t3n-sdk": "^4.35.1",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}

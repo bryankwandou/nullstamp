@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/*
+  Token diambil dari brand/brand.md. Rujukannya tinta segel di atas kertas,
+  bukan neon di atas kaca.
+
+  Setiap warna punya nilai pada `:root` biasa. Blok mode gelap hanya menimpa
+  nilainya, tidak memperkenalkan warna baru, supaya tidak ada warna yang cuma
+  hidup di satu mode.
+*/
+:root {
+  --ns-bg: #f7f6f3;
+  --ns-surface: #f0eee9;
+  --ns-line: #e6e3dc;
+  --ns-text: #0b0f14;
+  --ns-muted: #5b636e;
+  --ns-faint: #8a919b;
+
+  --ns-seal: #d6452c;
+  --ns-seal-strong: #a32e1c;
+  --ns-seal-wash: #fbe9e4;
+
+  --ns-verified: #1e7a57;
+  --ns-denied: #b4331f;
+  --ns-pending: #8a6212;
+
+  --ns-shadow: 0 1px 2px rgb(11 15 20 / 0.05), 0 8px 24px -12px rgb(11 15 20 / 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ns-bg: #0b0f14;
+    --ns-surface: #161c24;
+    --ns-line: #29313b;
+    --ns-text: #f2f1ee;
+    --ns-muted: #9aa2ad;
+    --ns-faint: #6b727f;
+
+    --ns-seal: #f2664a;
+    --ns-seal-strong: #ff8368;
+    --ns-seal-wash: #2a1712;
+
+    --ns-verified: #43b98b;
+    --ns-denied: #f0705a;
+    --ns-pending: #d3a441;
+
+    --ns-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 28px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ns-bg: #0b0f14;
+  --ns-surface: #161c24;
+  --ns-line: #29313b;
+  --ns-text: #f2f1ee;
+  --ns-muted: #9aa2ad;
+  --ns-faint: #6b727f;
+
+  --ns-seal: #f2664a;
+  --ns-seal-strong: #ff8368;
+  --ns-seal-wash: #2a1712;
+
+  --ns-verified: #43b98b;
+  --ns-denied: #f0705a;
+  --ns-pending: #d3a441;
+
+  --ns-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 28px -12px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-bg: var(--ns-bg);
+  --color-surface: var(--ns-surface);
+  --color-line: var(--ns-line);
+  --color-ink: var(--ns-text);
+  --color-muted: var(--ns-muted);
+  --color-faint: var(--ns-faint);
+  --color-seal: var(--ns-seal);
+  --color-seal-strong: var(--ns-seal-strong);
+  --color-seal-wash: var(--ns-seal-wash);
+  --color-verified: var(--ns-verified);
+  --color-denied: var(--ns-denied);
+  --color-pending: var(--ns-pending);
+
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  /* Latar disebut tegas. Body yang tembus pandang akan meminjam warna induknya. */
+  background-color: var(--ns-bg);
+  color: var(--ns-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--ns-seal);
+  color: #fff;
+}
+
+/* Kisi tipis untuk latar bagian pembuka. Dibuat dengan gradien, bukan gambar,
+   supaya tetap tajam pada rapat piksel berapa pun. */
+.ns-grid {
+  background-image:
+    linear-gradient(to right, var(--ns-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ns-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+}
+
+/* Penyingkapan saat masuk pandangan. Dipasang lewat IntersectionObserver;
+   tanpa JavaScript isinya tetap terlihat karena keadaan akhir jadi bawaan. */
+.ns-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ns-reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes ns-stamp {
+  0% {
+    transform: scale(1.5) rotate(-9deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.94) rotate(1.5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.ns-stamp-in {
+  animation: ns-stamp 620ms cubic-bezier(0.2, 0.9, 0.28, 1) both;
+}
+
+@keyframes ns-trace {
+  from {
+    stroke-dashoffset: var(--dash, 200);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ns-pulse-line {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Setiap gerak berhenti bila sistem meminta gerak dikurangi. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .ns-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .ns-stamp-in,
+  .ns-trace,
+  .ns-pulse {
+    animation: none !important;
+  }
+}

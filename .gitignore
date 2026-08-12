@@ -1,0 +1,29 @@
+# Rahasia. Jangan pernah masuk riwayat repositori.
+.env
+.env.local
+.env.*.local
+scripts/state.json
+
+# Rust
+target/
+**/target/
+Cargo.lock.bak
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+.npm/
+
+# Repo acuan hanya untuk pembanding setempat, tidak ikut disertakan.
+reference/
+
+# Berkas hasil percobaan pengubahan; dibuat ulang oleh docs/PROOF.md
+submission/tampered-*.json
+
+# Sistem
+.DS_Store
+Thumbs.db
