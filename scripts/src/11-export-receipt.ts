@@ -1,10 +1,10 @@
 /**
- * Langkah 11 — tarik receipt nyata dari testnet dan simpan ke berkas.
+ * Step 11 — pull a real receipt off testnet and write it to a file.
  *
- * Gunanya satu: menyediakan bahan untuk pemeriksaan di luar node. Berkas hasilnya
- * bisa diserahkan ke `verify-offline.ts`, yang tidak mengimpor SDK, tidak membuka
- * sesi, dan tidak menyentuh jaringan. Kalau digest-nya cocok di sana, berarti
- * keutuhan receipt bisa dibuktikan tanpa mempercayai node maupun kami.
+ * One purpose: to provide material for checking outside the node. The resulting file
+ * can be handed to `verify-offline.ts`, which imports no SDK, opens no session, and
+ * touches no network. If the digest agrees there, a receipt's integrity can be
+ * demonstrated without trusting the node and without trusting us.
  */
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -40,9 +40,8 @@ try {
     );
   }
 
-  // Ambil yang paling baru menurut waktu penerbitan. Bukan menurut receipt id,
-  // sebab id diturunkan dari digest sehingga urutannya tidak berhubungan dengan
-  // waktu.
+  // Take the newest by issuance time, not by receipt id: the id derives from the
+  // digest, so its ordering has nothing to do with time.
   const waktu = (r: Record<string, unknown>) =>
     Number((r.core as Record<string, unknown>)?.issued_at_secs ?? 0);
 
@@ -54,13 +53,13 @@ try {
   writeFileSync(tujuan, JSON.stringify(pilih, null, 2) + "\n", "utf8");
 
   const core = pilih.core as Record<string, unknown>;
-  console.log(`tersimpan ke : ${tujuan}`);
-  console.log(`receipt_id   : ${String(pilih.receipt_id)}`);
-  console.log(`digest       : ${String(pilih.digest_sha256)}`);
-  console.log(`host tujuan  : ${String(core.target_host)}`);
-  console.log(`field dipakai: ${JSON.stringify(core.fields_used)}`);
-  console.log(`seq_no       : ${String(core.seq_no)}`);
-  console.log(`\nperiksa di luar node dengan:`);
+  console.log(`saved to    : ${tujuan}`);
+  console.log(`receipt_id  : ${String(pilih.receipt_id)}`);
+  console.log(`digest      : ${String(pilih.digest_sha256)}`);
+  console.log(`target host : ${String(core.target_host)}`);
+  console.log(`fields used : ${JSON.stringify(core.fields_used)}`);
+  console.log(`seq_no      : ${String(core.seq_no)}`);
+  console.log(`\ncheck it outside the node with:`);
   console.log(`  npm run verify:offline -- ${process.argv[2] ?? "../submission/live-receipt.json"}`);
 } catch (e) {
   reportError(e);

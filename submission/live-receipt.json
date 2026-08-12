@@ -1,7 +1,7 @@
 {
   "core": {
-    "contract_id": 621,
-    "contract_version": "0.1.5",
+    "contract_id": 639,
+    "contract_version": "0.1.7",
     "extracted_pointers": [
       "/json/reason"
     ],
@@ -9,21 +9,21 @@
       "first_name",
       "last_name"
     ],
-    "issued_at_secs": 1786537397,
+    "issued_at_secs": 1786554217,
     "method": "POST",
     "purpose": "receipt_issuance_demo",
     "request_body_sha256": "26e5ee62768086e9213455818dbc5d17b41356f41f3d36ac92979a9059cffc6b",
     "response_body_sha256": "af8e3bce0cd50618030d03a18241046b5b8c8e41c173b6400eb754568a8528f2",
     "response_code": 200,
     "schema": "nullstamp.receipt.v1",
-    "seq_no": 112964,
+    "seq_no": 114186,
     "subject_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4",
     "target_host": "postman-echo.com",
     "target_url": "https://postman-echo.com/post",
     "tenant_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4"
   },
-  "digest_sha256": "4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe",
-  "receipt_id": "rcpt_4d8790a69bad4bbfd53c757f",
+  "digest_sha256": "8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3",
+  "receipt_id": "rcpt_8fb056c99bbea7e655d72075",
   "signature": null,
   "signing_error": "signing capability not imported; integrity rests on the claims digest"
 }

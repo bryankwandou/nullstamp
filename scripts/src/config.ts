@@ -1,8 +1,8 @@
 /**
- * Pengaturan bersama untuk seluruh langkah.
+ * Settings shared by every step.
  *
- * Kunci pengembang hanya dibaca dari lingkungan, tidak pernah dari argumen
- * baris perintah, supaya tidak tertinggal di riwayat shell.
+ * The developer key is read only from the environment, never from a command-line
+ * argument, so it cannot be left behind in shell history.
  */
 import "dotenv/config";
 import type { Environment } from "@terminal3/t3n-sdk";
@@ -10,12 +10,12 @@ import type { Environment } from "@terminal3/t3n-sdk";
 export const ENV: Environment =
   (process.env.T3N_ENV as Environment | undefined) ?? "testnet";
 
-/** Nama pendek contract. Nama kanoniknya nanti `z:<tid>:nullstamp`. */
+/** The contract's short name. Its canonical name becomes `z:<tid>:nullstamp`. */
 export const CONTRACT_TAIL = process.env.NULLSTAMP_TAIL ?? "nullstamp";
 
 /**
  * Versi ini harus naik setiap kali WASM didaftarkan ulang. Node menolak
- * pendaftaran dengan versi yang tidak lebih tinggi dari yang tercatat.
+ * a registration whose version is not higher than the one on record.
  */
 export const CONTRACT_VERSION = process.env.NULLSTAMP_VERSION ?? "0.1.0";
 
@@ -28,25 +28,25 @@ export const MAP_SECRETS = "secrets";
 export const MAP_RECEIPTS = "receipts";
 
 /**
- * Tujuan panggilan keluar untuk peragaan.
+ * Destination of the demo outbound call.
  *
- * Bawaannya sebuah layanan gema. Pilihan itu disengaja: karena gema memulangkan
+ * The default is an echo service, and that is deliberate: because an echo returns
  * badan permintaan apa adanya, hasilnya memperlihatkan langsung bahwa marker
  * `{{profile.<field>}}` benar-benar diselesaikan di sisi host, bukan dikirim
- * mentah. Tanpa gema, klaim itu hanya bisa dipercaya, tidak bisa dilihat.
+ * raw. Without an echo the claim could only be believed, not seen.
  *
  * Perlu diingat bahwa peragaan ini mengirim isi profil uji ke pihak ketiga.
- * Yang dipakai di testnet adalah profil uji, bukan data orang sungguhan. Untuk
- * peragaan yang lebih dekat ke pemakaian nyata, arahkan ke API pemesanan
+ * What testnet uses is a test profile, not a real person's data. For a demo
+ * closer to real use, point this at a booking API
  * seperti `https://api.duffel.com/air/orders` beserta kredensialnya.
  */
 export const TARGET_URL =
   process.env.NULLSTAMP_TARGET_URL ?? "https://postman-echo.com/post";
 
 /**
- * Host yang harus disebut di grant pengguna. Diturunkan dari alamat tujuan
- * supaya keduanya tidak pernah berbeda. Host yang tidak disebut membuat
- * panggilan berhenti dengan `host/http.egress_denied`.
+ * The host that must appear on the user grant. Derived from the target URL
+ * so the two can never disagree. A host that is not named makes the
+ * call stop with `host/http.egress_denied`.
  */
 export const UPSTREAM_HOST =
   process.env.NULLSTAMP_UPSTREAM_HOST ?? new URL(TARGET_URL).hostname;
@@ -64,12 +64,12 @@ export function requireApiKey(): string {
   if (!key || key.trim().length === 0) {
     throw new Error(
       [
-        "T3N_API_KEY belum diisi.",
+        "T3N_API_KEY is not set.",
         "",
-        "Kunci ini didapat dari halaman klaim dan hanya ditampilkan satu kali:",
+        "The key comes from the claim page and is shown only once:",
         "  https://go.terminal3.io/adk-community",
         "",
-        "Setelah dapat, salin ke berkas .env pada folder scripts:",
+        "Once you have it, copy it into scripts/.env:",
         "  T3N_API_KEY=0x...",
       ].join("\n"),
     );
@@ -78,9 +78,9 @@ export function requireApiKey(): string {
 }
 
 /**
- * Menandai bahwa verifikasi attestation sengaja dilewati. Hanya dipakai bila
- * manifest operator memang belum tersedia untuk lingkungan yang dituju.
- * Dibuat eksplisit supaya pilihan itu bisa ditemukan lewat pencarian teks.
+ * Marks attestation verification as deliberately skipped. Only for use when
+ * the operator manifest genuinely is not yet available for the target environment.
+ * Made explicit so the choice is findable by text search.
  */
 export const ALLOW_UNSAFE_TRUST =
   process.env.T3N_UNSAFE_TRUST_SERVER === "1";

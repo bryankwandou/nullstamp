@@ -1,13 +1,14 @@
 /**
- * Langkah 10 — baca log yang dipancarkan contract.
+ * Step 10 — read the log the contract emitted.
  *
- * Host menampung baris `logging::info` per pasangan tenant dan contract, lalu
- * menyediakannya lewat `contracts.logs`. Ini alat pemeriksaan paling langsung
- * ketika sebuah pemanggilan gagal tanpa penjelasan.
+ * The host buffers `logging::info` lines per tenant-and-contract pair and serves
+ * them through `contracts.logs`. This is the most direct diagnostic available when a
+ * call fails without explanation.
  *
- * Fasilitas ini tidak disebut di halaman Walkthrough maupun halaman galat umum,
- * padahal justru inilah yang dibutuhkan saat menghadapi kegagalan yang tidak
- * bercerita.
+ * It appears on neither the Walkthrough nor the common-errors page, which is finding
+ * T-07 — and it is precisely what you need when facing a failure that will not
+ * explain itself. Its *empty* output is what cracked finding T-12: a contract that
+ * logs nothing at all never started.
  */
 import { CONTRACT_TAIL } from "./config.js";
 import { openTenantClient, openUserSession, reportError } from "./session.js";

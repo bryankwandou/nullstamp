@@ -1,19 +1,20 @@
 /**
- * Pembukaan sesi ke T3N.
+ * Opening a session against T3N.
  *
- * Bedanya dengan contoh di halaman Quickstart ada dua, dan keduanya bukan
- * pilihan gaya melainkan keharusan yang dipaksa tipe SDK:
+ * This differs from the Quickstart sample in two ways, and neither is a matter of
+ * style — both are forced by the SDK's own types:
  *
- * 1. `trustAnchor` wajib diisi. Tanpa itu `T3nClient` melempar
- *    `T3nConfigError` di constructor, sebelum ada lalu lintas jaringan. Jalur
- *    yang benar adalah `fetchTrustedManifest`, yang memeriksa tanda tangan
- *    operator dan tidak pernah memulangkan anchor yang belum terverifikasi.
+ * 1. `trustAnchor` is required. Without it `T3nClient` throws `T3nConfigError` in the
+ *    constructor, before any network traffic. The correct path is
+ *    `fetchTrustedManifest`, which checks the operator signature and never returns an
+ *    unverified anchor.
  *
- * 2. Handshake butuh lebih dari penanda `EthSign`. Set lengkapnya disusun
- *    `createDefaultHandlers`, yang juga memasang penangan kunci ML-KEM dan
- *    sumber acak.
+ * 2. The handshake needs more than the `EthSign` signer. The full set comes from
+ *    `createDefaultHandlers`, which also installs the ML-KEM key handler and the
+ *    randomness source.
  *
- * Keduanya dicatat di docs/BUGS.md sebagai selisih antara dokumentasi dan SDK.
+ * Both are recorded in docs/BUGS.md as findings T-01 and T-02: gaps between the
+ * documentation and the SDK.
  */
 import {
   T3nClient,
@@ -50,14 +51,14 @@ export async function resolveTrustAnchor(): Promise<TrustAnchorOrUnsafe> {
   const peers = anchor.expected_peer_ids?.length ?? 0;
   const rtmr = anchor.rtmr3_allowlist?.length ?? 0;
   console.log(
-    `anchor terverifikasi — ${peers} peer, ${rtmr} pengukuran RTMR3`,
+    `anchor verified — ${peers} peers, ${rtmr} RTMR3 measurement(s)`,
   );
   return anchor;
 }
 
 /**
- * Buka sesi pengguna: handshake lalu autentikasi memakai kunci pengembang.
- * DID tenant datang dari jawaban server, tidak pernah disusun sendiri dari
+ * Open a user session: handshake, then authenticate with the developer key.
+ * The tenant DID comes from the server's answer, never assembled locally from
  * alamat wallet.
  */
 export async function openUserSession(): Promise<UserSession> {
@@ -100,12 +101,12 @@ export function openTenantClient(session: UserSession): TenantClient {
 /** Cetak galat apa adanya, termasuk field tambahan yang dibawa kelas galat SDK. */
 export function reportError(e: unknown): never {
   const err = e as Record<string, unknown> & { message?: string };
-  console.error("\n--- LANGKAH GAGAL ---");
-  console.error("jenis  :", (e as object)?.constructor?.name ?? typeof e);
-  console.error("pesan  :", err?.message ?? String(e));
+  console.error("\n--- STEP FAILED ---");
+  console.error("kind   :", (e as object)?.constructor?.name ?? typeof e);
+  console.error("message:", err?.message ?? String(e));
   for (const k of ["code", "field", "authMethod", "currentState", "request_id", "requestId"]) {
     if (err?.[k] !== undefined) console.error(`${k.padEnd(7)}:`, err[k]);
   }
-  if (err?.stack) console.error("\njejak  :\n" + String(err.stack));
+  if (err?.stack) console.error("\nstack  :\n" + String(err.stack));
   process.exit(1);
 }

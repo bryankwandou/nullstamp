@@ -1,16 +1,16 @@
 /**
- * Pemeriksa receipt yang berjalan tanpa jaringan.
+ * A receipt checker that runs with no network.
  *
- * Ini yang menopang klaim utama Nullstamp. Kalau sebuah bukti hanya bisa
- * diperiksa oleh pihak yang menerbitkannya, nilainya tidak lebih dari catatan
- * biasa. Karena itu digest dihitung atas bentuk kanonik: kunci objek tertata
- * menaik, tidak ada spasi, sehingga perhitungan yang sama bisa diulang siapa pun
- * dengan alat apa pun.
+ * This is what holds up Nullstamp's central claim. If a receipt can only be checked
+ * by whoever issued it, it is worth no more than an ordinary log line. So the digest
+ * is computed over a canonical form: object keys ascending, no whitespace, which
+ * means anyone can repeat the same arithmetic with any tool.
  *
- * Berkas ini sengaja tidak mengimpor SDK. Tidak ada sesi, tidak ada kunci, tidak
- * ada sambungan keluar.
+ * This file deliberately imports no SDK. No session, no key, no outbound connection.
  *
- * Pemakaian:
+ * Exits 0 for a valid receipt and 1 for a tampered one, so it drops into CI as is.
+ *
+ * Usage:
  *   npx tsx src/verify-offline.ts receipt.json
  *   cat receipt.json | npx tsx src/verify-offline.ts
  */
@@ -20,12 +20,12 @@ import { readFileSync } from "node:fs";
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 /**
- * Susun bentuk kanonik yang sama dengan sisi Rust.
+ * Build the same canonical form the Rust side builds.
  *
- * `serde_json` memakai `BTreeMap` selama fitur `preserve_order` tidak
- * dinyalakan, jadi kunci objeknya keluar urut menaik. Fungsi ini menirunya:
+ * `serde_json` rests on `BTreeMap` as long as the `preserve_order` feature is off,
+ * so its object keys come out ascending. This mirrors that:
  * kunci diurutkan menurut titik kode, larik dibiarkan pada urutan aslinya
- * karena urutan larik memang bermakna.
+ * because array order genuinely carries meaning.
  */
 export function canonical(value: Json): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -84,8 +84,8 @@ export function periksa(sampul: Record<string, Json>): Hasil {
     }
   }
 
-  // Pemeriksaan disiplin isi: lapis core tidak boleh memuat marker yang belum
-  // terselesaikan maupun nilai profil. Yang sah hanya nama field.
+  // Content-discipline check: the core layer must carry neither an unresolved
+  // marker nor a profile value. Field names only.
   const teksCore = JSON.stringify(core);
   if (teksCore.includes("{{")) {
     alasan.push("core still contains an unresolved marker");

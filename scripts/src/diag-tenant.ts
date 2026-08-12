@@ -2,8 +2,8 @@
  * Penyelidikan keadaan tenant.
  *
  * Dipakai setelah `tenant.claim()` menjawab "Internal error". Urutannya disusun
- * dari yang paling tidak mengubah keadaan: baca dulu, baru mencoba menulis.
- * Setiap panggilan dilaporkan apa adanya beserta request_id-nya, karena halaman
+ * least state-changing first: read before attempting any write. Every call is
+ * reported verbatim along with its request_id, because the
  * galat umum meminta nomor itu saat melaporkan kegagalan 500.
  */
 import { openTenantClient, openUserSession } from "./session.js";

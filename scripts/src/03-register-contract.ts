@@ -1,14 +1,16 @@
 /**
- * Langkah 3 — daftarkan WASM component.
+ * Step 3 — register the WASM component.
  *
- * Pendaftaran dilakukan lebih dulu daripada pembuatan map, bukan sebaliknya.
- * Alasannya: daftar pembaca dan penulis map disebut memakai nomor contract, dan
- * nomor itu baru ada setelah pendaftaran selesai. Urutan pada halaman
- * Walkthrough tidak menyebut ketergantungan ini.
+ * Registration comes before map creation, not after. The reason: a map's reader and
+ * writer sets are expressed as contract ids, and the id only exists once
+ * registration has completed. The Walkthrough's ordering does not mention this
+ * dependency — see finding T-05 in docs/BUGS.md.
  *
- * Bila nama dan versi yang sama didaftarkan dua kali, node menolak dengan
- * "version <x> is not higher than current version <y>". Naikkan
- * NULLSTAMP_VERSION di .env, lalu ulangi.
+ * Registering the same name and version twice is refused with
+ * "version <x> is not higher than current version <y>". Raise NULLSTAMP_VERSION in
+ * .env and try again. Note the version lives in three places — Cargo.toml,
+ * world.wit, and CONTRACT_VERSION — with no single source of truth, which is
+ * finding T-10 and a mistake worth watching for.
  */
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -23,13 +25,13 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 try {
   const wasmFile = resolve(HERE, "..", WASM_PATH);
   const wasm = readFileSync(wasmFile);
-  console.log(`berkas WASM : ${wasmFile}`);
-  console.log(`ukuran      : ${wasm.byteLength} bita`);
+  console.log(`wasm file   : ${wasmFile}`);
+  console.log(`size        : ${wasm.byteLength} bytes`);
 
   const s = await openUserSession();
   const tenant = openTenantClient(s);
 
-  console.log(`mendaftarkan ${CONTRACT_TAIL} versi ${CONTRACT_VERSION}...`);
+  console.log(`registering ${CONTRACT_TAIL} version ${CONTRACT_VERSION}...`);
   const hasil = await tenant.contracts.register({
     tail: CONTRACT_TAIL,
     version: CONTRACT_VERSION,
@@ -37,7 +39,7 @@ try {
   });
 
   console.log("nama kanonik :", hasil.name);
-  console.log("nomor contract:", hasil.contract_id);
+  console.log("contract id   :", hasil.contract_id);
 
   writeState({
     contractName: hasil.name,
@@ -45,7 +47,7 @@ try {
     contractVersion: CONTRACT_VERSION,
   });
 
-  console.log("\nnomor contract tersimpan; dipakai langkah pembuatan map");
+  console.log("\ncontract id saved; the map step uses it");
 } catch (e) {
   reportError(e);
 }

@@ -1,6 +1,6 @@
 [package]
 name = "z-tenant-nullstamp"
-version = "0.1.5"
+version = "0.1.7"
 edition = "2021"
 description = "Nullstamp — verifiable consent receipts for agent calls that touch personal data, issued inside a Trinity TEE"
 license = "MIT"

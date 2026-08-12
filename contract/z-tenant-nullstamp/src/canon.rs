@@ -1,29 +1,29 @@
-//! Bagian murni Nullstamp: pembacaan marker profil, penyusunan bentuk kanonik,
-//! dan perhitungan digest. Tidak menyentuh host sama sekali, sehingga seluruh
-//! aturan di sini bisa diuji pada target biasa tanpa WASM.
+//! The pure part of Nullstamp: profile-marker parsing, canonical-form rendering,
+//! and digest computation. It touches no host interface, so every rule in here is
+//! testable on an ordinary target without WASM.
 
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-/// Namespace satu-satunya yang boleh dirujuk marker. Host menolak namespace
-/// lain dengan `placeholder-denied`; contract menolaknya lebih awal supaya
-/// pesannya jelas dan tidak ada panggilan keluar yang sempat terjadi.
+/// The only namespace a marker may reference. The host refuses other namespaces
+/// with `placeholder-denied`; the contract refuses them earlier so the message is
+/// clear and no outbound call ever happens.
 pub const PROFILE_NS: &str = "profile.";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MarkerError {
-    /// Ada `{{` tanpa `}}` penutup.
+    /// A `{{` with no closing `}}`.
     Unterminated,
-    /// Marker menunjuk namespace selain `profile`, misalnya `{{secrets.key}}`.
+    /// The marker names a namespace other than `profile`, e.g. `{{secrets.key}}`.
     ForeignNamespace(String),
-    /// Marker kosong, yaitu `{{}}`.
+    /// An empty marker, i.e. `{{}}`.
     Empty,
 }
 
 impl core::fmt::Display for MarkerError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            MarkerError::Unterminated => write!(f, "marker tidak ditutup dengan }}}}"),
+            MarkerError::Unterminated => write!(f, "marker is not closed with }}}}"),
             MarkerError::ForeignNamespace(m) => {
                 write!(f, "marker di luar namespace profile: {{{{{m}}}}}")
             }
@@ -32,13 +32,13 @@ impl core::fmt::Display for MarkerError {
     }
 }
 
-/// Kumpulkan nama field profil yang dirujuk `text`, urut menaik dan tanpa
-/// duplikat. Prefiks `profile.` dilepas, jadi `{{profile.first_name}}`
-/// menghasilkan `first_name`.
+/// Collect the profile field names referenced by `text`, ascending and without
+/// duplicates. The `profile.` prefix is stripped, so `{{profile.first_name}}`
+/// yields `first_name`.
 ///
-/// Marker di luar namespace `profile` langsung menjadi galat, bukan diabaikan.
-/// Membiarkannya lewat berarti receipt bisa mengaku hanya memakai field profil
-/// padahal ada rujukan lain di badan permintaan.
+/// A marker outside the `profile` namespace is an error rather than something to
+/// skip. Letting one through would mean a receipt could claim it used only profile
+/// fields while the request body referenced something else.
 pub fn collect_profile_fields(text: &str) -> Result<Vec<String>, MarkerError> {
     let bytes = text.as_bytes();
     let mut fields: Vec<String> = Vec::new();
@@ -83,12 +83,11 @@ fn find_close(bytes: &[u8], from: usize) -> Option<usize> {
     None
 }
 
-/// Bandingkan field yang diakui pemanggil dengan field yang benar-benar muncul
-/// di badan permintaan. Keduanya harus sama persis.
+/// Compare the fields the caller declared against the fields that actually appear
+/// in the request body. The two must match exactly.
 ///
-/// Inilah yang membuat receipt tidak bisa mengecilkan cakupan: mengaku memakai
-/// dua field padahal badan permintaan merujuk empat akan ditolak sebelum ada
-/// lalu lintas keluar.
+/// This is what stops a receipt from understating its own scope: declaring two
+/// fields while the body references four is rejected before any traffic leaves.
 pub fn reconcile_fields(declared: &[String], found: &[String]) -> Result<Vec<String>, String> {
     let mut declared_sorted: Vec<String> = declared.to_vec();
     declared_sorted.sort();
@@ -107,22 +106,22 @@ pub fn reconcile_fields(declared: &[String], found: &[String]) -> Result<Vec<Str
         .filter(|f| !found.contains(f))
         .collect();
 
-    let mut reason = String::from("declared_fields tidak cocok dengan body_template");
+    let mut reason = String::from("declared_fields does not match body_template");
     if !missing.is_empty() {
-        reason.push_str(&format!(" — dipakai tapi tidak diakui: {missing:?}"));
+        reason.push_str(&format!(" — used but not declared: {missing:?}"));
     }
     if !extra.is_empty() {
-        reason.push_str(&format!(" — diakui tapi tidak dipakai: {extra:?}"));
+        reason.push_str(&format!(" — declared but not used: {extra:?}"));
     }
     Err(reason)
 }
 
-/// Ambil nama host dari sebuah URL tanpa menarik pustaka parser URL.
-/// Hanya bagian otoritas yang diambil; kredensial dan porta dibuang.
+/// Extract the host name from a URL without pulling in a URL parser.
+/// Only the authority part is taken; credentials and port are dropped.
 pub fn host_of(url: &str) -> Result<String, String> {
     let rest = url
         .strip_prefix("https://")
-        .ok_or_else(|| format!("url harus memakai https: {url}"))?;
+        .ok_or_else(|| format!("url must use https: {url}"))?;
     let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
     let authority = authority.rsplit('@').next().unwrap_or(authority);
     let host = authority.split(':').next().unwrap_or("");
@@ -132,17 +131,17 @@ pub fn host_of(url: &str) -> Result<String, String> {
     Ok(host.to_string())
 }
 
-/// Bentuk kanonik sebuah nilai JSON. `serde_json::Map` bersandar pada
-/// `BTreeMap` selama fitur `preserve_order` tidak dinyalakan, sehingga kunci
-/// objek keluar urut menaik dan hasilnya sama di mesin mana pun.
+/// Canonical form of a JSON value. `serde_json::Map` rests on `BTreeMap` as long
+/// as the `preserve_order` feature is off, so object keys come out ascending and
+/// the result is identical on any machine.
 ///
-/// Sifat itu yang membuat digest bisa dihitung ulang di luar node.
+/// That property is what makes the digest recomputable outside the node.
 pub fn canonical_bytes(value: &Value) -> Result<Vec<u8>, String> {
-    serde_json::to_vec(value).map_err(|e| format!("gagal menyusun bentuk kanonik: {e}"))
+    serde_json::to_vec(value).map_err(|e| format!("could not render canonical form: {e}"))
 }
 
-/// Digest SHA-256 atas bentuk kanonik. Panjangnya tepat 32 bita, sesuai yang
-/// dituntut `kv-store.set-claims-digest`.
+/// SHA-256 digest over the canonical form. Exactly 32 bytes, which is what
+/// `kv-store.set-claims-digest` requires.
 pub fn digest_of(value: &Value) -> Result<[u8; 32], String> {
     let bytes = canonical_bytes(value)?;
     let mut hasher = Sha256::new();
@@ -150,16 +149,16 @@ pub fn digest_of(value: &Value) -> Result<[u8; 32], String> {
     Ok(hasher.finalize().into())
 }
 
-/// Digest atas deretan bita mentah, dipakai untuk sidik badan permintaan dan
-/// badan tanggapan.
+/// Digest over raw bytes, used for the request-body and response-body
+/// fingerprints.
 pub fn digest_bytes(bytes: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     hasher.finalize().into()
 }
 
-/// Identitas receipt diturunkan dari digest-nya sendiri, jadi dua penerbitan
-/// dengan isi persis sama tidak akan menghasilkan dua baris berbeda.
+/// A receipt's identity derives from its own digest, so two issuances with
+/// identical content cannot produce two different rows.
 pub fn receipt_id_from(digest: &[u8; 32]) -> String {
     format!("rcpt_{}", hex::encode(&digest[..12]))
 }
@@ -211,7 +210,7 @@ mod tests {
         let found = vec!["email".to_string(), "first_name".to_string()];
         let declared = vec!["first_name".to_string()];
         let err = reconcile_fields(&declared, &found).unwrap_err();
-        assert!(err.contains("dipakai tapi tidak diakui"));
+        assert!(err.contains("used but not declared"));
         assert!(err.contains("email"));
     }
 
@@ -220,7 +219,7 @@ mod tests {
         let found = vec!["first_name".to_string()];
         let declared = vec!["first_name".to_string(), "date_of_birth".to_string()];
         let err = reconcile_fields(&declared, &found).unwrap_err();
-        assert!(err.contains("diakui tapi tidak dipakai"));
+        assert!(err.contains("declared but not used"));
     }
 
     #[test]

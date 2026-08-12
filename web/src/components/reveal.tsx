@@ -3,9 +3,9 @@
 /**
  * Penyingkapan saat bagian masuk pandangan.
  *
- * Keadaan akhir dijadikan bawaan di CSS, jadi tanpa JavaScript isinya tetap
- * terlihat. Pengamatnya dilepas setelah sekali menyala, karena bagian yang sudah
- * tampil tidak perlu diamati lagi.
+ * The final state is the CSS default, so the content stays visible with JavaScript
+ * off. The observer detaches after firing once, because a section already shown
+ * does not need watching.
  */
 
 import { useEffect, useRef, useState } from "react";

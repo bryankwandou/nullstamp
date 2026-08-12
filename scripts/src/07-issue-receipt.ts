@@ -1,10 +1,9 @@
 /**
- * Langkah 7 — terbitkan receipt.
+ * Step 7 — issue a receipt.
  *
- * Inilah titik yang membuktikan seluruh rangkaian bekerja. Badan permintaan
- * hanya memuat marker, bukan nilai. Bila tanggapan gema memulangkan nilai yang
- * sudah terisi, artinya host yang menyelesaikannya di dalam enclave, sebab
- * contract tidak pernah memegang nilai itu.
+ * This is the point that proves the whole chain works. The request body carries
+ * markers, not values. If the echo response comes back with values filled in, the
+ * host substituted them inside the enclave, because the contract never held them.
  */
 import {
   CONTRACT_TAIL,
@@ -42,10 +41,10 @@ try {
   };
   if (PAKAI_SECRET) input.secret_key = SECRET_KEY;
 
-  console.log("tujuan        :", TARGET_URL);
-  console.log("field diakui  :", DEMO_FIELDS.join(", "));
-  console.log("badan dikirim :", JSON.stringify(input.body_template));
-  console.log("\nmemanggil issue-receipt...\n");
+  console.log("target        :", TARGET_URL);
+  console.log("declared      :", DEMO_FIELDS.join(", "));
+  console.log("body sent     :", JSON.stringify(input.body_template));
+  console.log("\ncalling issue-receipt...\n");
 
   const hasil = await tenant.contracts.execute(CONTRACT_TAIL, {
     version: CONTRACT_VERSION,
@@ -58,7 +57,7 @@ try {
   const receiptId = (hasil as { receipt_id?: string })?.receipt_id;
   if (receiptId) {
     writeState({ lastReceiptId: receiptId });
-    console.log(`\nreceipt tersimpan: ${receiptId}`);
+    console.log(`\nreceipt stored: ${receiptId}`);
   } else {
     console.log(
       "\ncatatan: jawaban tidak memuat receipt_id di aras teratas; periksa bentuk sampulnya",

@@ -42,7 +42,7 @@ export function SiteFooter() {
         </div>
 
         <p className="mt-10 font-mono text-[12px] text-faint">
-          MIT. Contract z:tenant-nullstamp@0.1.5, live on T3N testnet.
+          MIT. Contract z:tenant-nullstamp@0.1.7, live on T3N testnet.
         </p>
       </div>
     </footer>

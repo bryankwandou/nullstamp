@@ -1,45 +1,48 @@
-//! Nullstamp — bukti terverifikasi untuk panggilan agent yang menyentuh data
-//! pribadi.
+//! Nullstamp — verifiable receipts for agent calls that touch personal data.
 //!
-//! Masalahnya begini. Agent yang mengurus hal nyata harus menyentuh nama,
-//! tanggal lahir, dan alamat surel seseorang. Cara mencatat aktivitas itu hari
-//! ini terjepit di antara dua kegagalan: catatan yang lengkap menyimpan data
-//! mentah sehingga catatan itu sendiri menjadi risiko kebocoran, sementara
-//! catatan yang diredaksi kehilangan kelengkapan sehingga tidak bisa dibuktikan
-//! utuh saat diperiksa.
+//! The problem it addresses. An agent doing real work has to touch someone's
+//! name, date of birth, and email address. Recording that activity today is
+//! caught between two failures: a complete log stores raw data and becomes a
+//! liability in its own right, while a redacted log loses completeness and cannot
+//! be shown to be intact when audited.
 //!
-//! Contract ini memilih jalan ketiga. Panggilan keluar dikirim lewat
-//! `http-with-placeholders`, jadi nilai field diselesaikan host di dalam enclave
-//! dan tidak pernah masuk memori WASM. Yang dicatat adalah nama field yang
-//! dirujuk, host tujuan, sidik badan permintaan, dan hasil panggilannya. Semua
-//! pernyataan itu diikat satu digest SHA-256 yang ditanam ke Merkle leaf
-//! transaksi lewat `kv-store.set-claims-digest`, sehingga bisa diperiksa ulang
-//! di luar node.
+//! This contract takes a third route. Outbound calls go through
+//! `http-with-placeholders`, so field values are substituted by the host inside
+//! the enclave and never enter WASM memory. What gets recorded is the field names
+//! referenced, the destination host, a digest of the request body, and the
+//! outcome. All of those claims are bound by one SHA-256 digest, planted in the
+//! transaction's Merkle leaf via `kv-store.set-claims-digest`, so they can be
+//! recomputed outside the node.
 //!
-//! # Kemampuan host yang diminta
+//! # Host capabilities requested
 //!
 //! ```json
 //! {
 //!   "host_capabilities": [
-//!     "kv_store", "logging", "tenant_context", "http_with_placeholders", "signing"
+//!     "kv_store", "logging", "tenant_context", "http_with_placeholders"
 //!   ]
 //! }
 //! ```
 //!
-//! `signing` bersifat pelengkap. Bila tidak diberikan, receipt tetap terbit dan
-//! tetap terikat lewat claims digest; alasan ketiadaan tanda tangan dicatat di
-//! dalam receipt daripada disembunyikan.
+//! `signing` is deliberately absent. Importing it prevents the contract from
+//! being instantiated at all — see finding T-12 in docs/BUGS.md. Receipts remain
+//! bound through the claims digest, and the reason no signature is present is
+//! recorded inside the receipt rather than hidden.
 //!
-//! # Persiapan sebelum pemakaian pertama
+//! # Setup before first use
 //!
-//! Tenant SDK harus membuat dua map lebih dulu, `secrets` dan `receipts`, lalu
-//! menanam kredensial upstream ke `secrets`. Bila `readers` dikosongkan saat
-//! pembuatan map, governor KV menolak pembacaan meskipun yang membaca adalah
-//! contract pemilik map itu sendiri.
+//! The tenant SDK has to create two maps first, `secrets` and `receipts`, then
+//! seed the upstream credential into `secrets`. If `readers` is left empty at map
+//! creation the KV governor refuses reads, even when the reader is the very
+//! contract that owns the map.
+//!
+//! Note also that map ACLs bind to the numeric contract id, and every
+//! registration mints a new one, so the ACLs must be re-pointed after each
+//! re-register (finding T-13). `scripts/src/04b-sync-map-acl.ts` does that.
 #![warn(clippy::style, missing_debug_implementations)]
 #![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 
-pub const CONTRACT_VERSION: &str = "0.1.5";
+pub const CONTRACT_VERSION: &str = "0.1.7";
 
 wit_bindgen::generate!({
     world: "tenant-nullstamp",
@@ -64,21 +67,21 @@ impl exports::z::tenant_nullstamp::contracts::Guest for Component {
     fn issue_receipt(
         req: exports::z::tenant_nullstamp::contracts::GenericInput,
     ) -> Result<Vec<u8>, String> {
-        let input = req.input.ok_or("issue-receipt: input tidak dikirim")?;
+        let input = req.input.ok_or("issue-receipt: no input supplied")?;
         issue::issue_receipt(&input)
     }
 
     fn verify_receipt(
         req: exports::z::tenant_nullstamp::contracts::GenericInput,
     ) -> Result<Vec<u8>, String> {
-        let input = req.input.ok_or("verify-receipt: input tidak dikirim")?;
+        let input = req.input.ok_or("verify-receipt: no input supplied")?;
         verify::verify_receipt(&input)
     }
 
     fn list_receipts(
         req: exports::z::tenant_nullstamp::contracts::GenericInput,
     ) -> Result<Vec<u8>, String> {
-        // Daftar boleh diminta tanpa payload; anggap sebagai permintaan bawaan.
+        // Listing may be requested with no payload; treat that as the defaults.
         let input = req.input.unwrap_or_default();
         list::list_receipts(&input)
     }
@@ -92,11 +95,11 @@ mod tests {
     use super::CONTRACT_VERSION;
 
     #[test]
-    fn versi_contract_berbentuk_semver() {
-        let bagian: Vec<&str> = CONTRACT_VERSION.split('.').collect();
-        assert_eq!(bagian.len(), 3, "CONTRACT_VERSION harus MAJOR.MINOR.PATCH");
-        for b in bagian {
-            assert!(b.parse::<u32>().is_ok(), "setiap bagian harus angka");
+    fn contract_version_is_semver() {
+        let parts: Vec<&str> = CONTRACT_VERSION.split('.').collect();
+        assert_eq!(parts.len(), 3, "CONTRACT_VERSION must be MAJOR.MINOR.PATCH");
+        for b in parts {
+            assert!(b.parse::<u32>().is_ok(), "every part must be numeric");
         }
     }
 }

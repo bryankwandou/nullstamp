@@ -210,8 +210,11 @@ Observed across six registrations of the same contract during this exercise:
 | 0.1.3 | 619 |
 | 0.1.4 | 620 |
 | 0.1.5 | 621 |
+| 0.1.6 | 638 |
+| 0.1.7 | 639 |
 
-Note that the ids are not even contiguous, so they cannot be predicted.
+Note that the ids are neither contiguous nor predictable — 621 to 638 skips
+sixteen. So there is no way to precompute the next one and pre-authorise it.
 
 Maps created against 615 rejected 617 with:
 
@@ -387,9 +390,9 @@ inside the enclave on testnet, exported and checked by a separate TypeScript
 program that imports no SDK, opens no session, and makes no network request:
 
 ```
-receipt_id      : rcpt_4d8790a69bad4bbfd53c757f
-digest recorded : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
-digest computed : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
+receipt_id      : rcpt_8fb056c99bbea7e655d72075
+digest recorded : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
+digest computed : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
 
 RESULT: valid. Digest recomputed outside the node and it matches.
 ```

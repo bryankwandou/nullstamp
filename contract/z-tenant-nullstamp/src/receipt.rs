@@ -1,27 +1,27 @@
-//! Bentuk receipt Nullstamp.
+//! The shape of a Nullstamp receipt.
 //!
-//! Receipt terbagi dua lapis. `core` memuat semua pernyataan yang diikat
-//! digest; lapis luar menambahkan digest itu, identitasnya, dan tanda tangan
-//! bila tersedia. Pemisahan ini membuat siapa pun bisa menghitung ulang digest
-//! dari `core` tanpa perlu menebak field mana yang ikut dihitung.
+//! A receipt has two layers. `core` holds every claim that the digest binds; the
+//! outer layer adds that digest, the derived identity, and a signature when one is
+//! available. Keeping them apart is what lets anyone recompute the digest from
+//! `core` without having to guess which fields were included.
 //!
-//! Tidak ada nilai field profil yang pernah masuk ke sini. Yang dicatat hanya
-//! nama field, tujuan, sidik badan permintaan, dan hasil panggilannya.
+//! No profile field value ever reaches this module. What gets recorded is field
+//! names, the destination, a fingerprint of the request body, and the outcome.
 
 use serde_json::{json, Value};
 
 use crate::canon;
 
-/// Masukan penyusunan `core`. Semuanya sudah bersih dari PII: `fields_used`
-/// berisi nama field, bukan isinya.
+/// Inputs for assembling `core`. All of it is already free of PII: `fields_used`
+/// holds field names, not their contents.
 #[derive(Debug, Clone)]
 pub struct CoreParams {
     pub schema: &'static str,
     pub contract_version: &'static str,
     pub tenant_did_hex: String,
     pub contract_id: u32,
-    /// DID pengguna yang sesi panggilannya sedang berjalan. Kosong bila
-    /// contract dipanggil lewat jalur `/api/dev/exec` yang tidak membawa sesi.
+    /// DID of the user whose session is making the call. Empty when the contract
+    /// is invoked through `/api/dev/exec`, which carries no session.
     pub subject_did_hex: Option<String>,
     pub purpose: String,
     pub method: String,
@@ -31,17 +31,17 @@ pub struct CoreParams {
     pub request_body_sha256: String,
     pub response_code: u16,
     pub response_body_sha256: String,
-    /// Penunjuk JSON yang diminta pemanggil untuk diambil dari tanggapan.
-    /// Bawaannya kosong: yang kembali hanya kode status dan sidik badan.
-    /// Apa pun yang ditarik keluar tercatat di sini, jadi keterbukaannya ikut
-    /// terikat digest.
+    /// JSON pointers the caller asked to have pulled out of the response.
+    /// Empty by default: only the status code and the body fingerprint come back.
+    /// Anything extracted is recorded here, so that exposure is itself bound into
+    /// the digest.
     pub extracted_pointers: Vec<String>,
     pub issued_at_secs: u64,
     pub seq_no: u64,
 }
 
-/// Susun lapis `core`. Kunci ditulis apa adanya; urutan akhir ditentukan
-/// `serde_json` yang menata kunci objek secara menaik.
+/// Assemble the `core` layer. Keys are written as they come; the final ordering
+/// is decided by `serde_json`, which lays object keys out ascending.
 pub fn build_core(p: &CoreParams) -> Value {
     json!({
         "schema": p.schema,
@@ -63,8 +63,8 @@ pub fn build_core(p: &CoreParams) -> Value {
     })
 }
 
-/// Hasil penerbitan: `core`, digest atasnya, identitas turunan, dan status
-/// tanda tangan.
+/// The result of issuance: `core`, its digest, the derived identity, and the
+/// signature status.
 #[derive(Debug, Clone)]
 pub struct Sealed {
     pub receipt_id: String,
@@ -72,7 +72,7 @@ pub struct Sealed {
     pub core: Value,
 }
 
-/// Hitung digest `core` lalu turunkan identitas receipt darinya.
+/// Compute the digest of `core`, then derive the receipt identity from it.
 pub fn seal(core: Value) -> Result<Sealed, String> {
     let digest = canon::digest_of(&core)?;
     Ok(Sealed {
@@ -82,12 +82,13 @@ pub fn seal(core: Value) -> Result<Sealed, String> {
     })
 }
 
-/// Bentuk akhir yang disimpan di KV dan dikembalikan ke pemanggil.
+/// The final shape stored in KV and returned to the caller.
 ///
-/// `signature` sengaja boleh kosong. Kemampuan `signing` diberikan saat contract
-/// diterima host, dan sebuah tenant bisa jalan tanpanya. Bila kosong, receipt
-/// masih terikat lewat digest yang ditanam di Merkle leaf transaksi, dan
-/// alasannya dicatat terbuka daripada disembunyikan.
+/// `signature` is allowed to be absent, deliberately. This contract does not
+/// import the `signing` interface, because doing so prevents it from being
+/// instantiated at all (finding T-12). With no signature the receipt is still
+/// bound by the digest planted in the transaction's Merkle leaf, and the reason
+/// is recorded openly rather than hidden.
 pub fn envelope(sealed: &Sealed, signature: Option<Value>, signing_error: Option<String>) -> Value {
     json!({
         "receipt_id": sealed.receipt_id,
@@ -128,8 +129,8 @@ mod tests {
         let core = build_core(&contoh());
         let teks = serde_json::to_string(&core).unwrap();
         assert!(teks.contains("first_name"));
-        // Tidak ada nilai profil apa pun yang bisa muncul, karena tidak pernah
-        // diterima fungsi ini.
+        // No profile value can appear here, because this function never receives
+        // one.
         assert!(!teks.contains("{{"));
     }
 
@@ -163,9 +164,9 @@ mod tests {
     #[test]
     fn sampul_tanpa_tanda_tangan_mencatat_alasannya() {
         let sealed = seal(build_core(&contoh())).unwrap();
-        let env = envelope(&sealed, None, Some("capability signing tidak ada".to_string()));
+        let env = envelope(&sealed, None, Some("signing capability absent".to_string()));
         assert!(env["signature"].is_null());
-        assert_eq!(env["signing_error"], "capability signing tidak ada");
+        assert_eq!(env["signing_error"], "signing capability absent");
         assert_eq!(env["receipt_id"], sealed.receipt_id);
         assert_eq!(env["digest_sha256"], hex::encode(sealed.digest));
     }

@@ -1,9 +1,9 @@
 /**
  * Tanda Nullstamp.
  *
- * Cincinnya memakai `currentColor` sehingga ikut warna teks induknya, dan
+ * The ring uses `currentColor` so it follows its parent's text colour, and
  * palang diagonalnya tetap vermilion di kedua mode. Identitas mask dibuat unik
- * per contoh, karena mask dengan id yang sama pada satu halaman akan saling
+ * per instance, because two masks sharing an id on one page would
  * menimpa.
  */
 "use client";

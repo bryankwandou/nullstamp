@@ -1,41 +1,41 @@
-//! `list-receipts` — ambil jejak receipt milik tenant ini.
+//! `list-receipts` — read this tenant's receipt trail.
 //!
-//! Pemindaian KV bersifat sekali jalan; host tidak menyediakan kursor antar
-//! panggilan. Karena itu jawaban menyertakan `next_start` bila hasilnya
-//! menyentuh batas, supaya pemanggil bisa melanjutkan dari titik itu.
+//! A KV scan is single-shot; the host provides no cursor across calls. So the
+//! response carries `next_start` whenever the result hit the limit, letting the
+//! caller resume from that point.
 
 use serde::Deserialize;
 
-/// Semua identitas receipt berawalan ini, jadi pemindaian bisa dibatasi pada
-/// rentang setengah terbuka `[rcpt_, rcpt`)`.
+/// Every receipt identity carries this prefix, so a scan can be bounded to the
+/// half-open range `[rcpt_, rcpt`)`.
 pub const PREFIX: &[u8] = b"rcpt_";
-/// Bita `_` adalah 0x5F; penggantinya 0x60 menutup rentang tanpa ikut terbaca.
+/// The `_` byte is 0x5F; using 0x60 closes the range without being included.
 pub const PREFIX_END: &[u8] = b"rcpt\x60";
 
-const LIMIT_BAWAAN: u32 = 50;
-const LIMIT_TERTINGGI: u32 = 200;
+const DEFAULT_LIMIT: u32 = 50;
+const MAX_LIMIT: u32 = 200;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct ListReq {
-    /// Titik awal pemindaian. Bila kosong, dimulai dari awal rentang.
+    /// Where the scan starts. When absent, it begins at the start of the range.
     #[serde(default)]
     pub start: Option<String>,
     #[serde(default)]
     pub limit: Option<u32>,
 }
 
-/// Batas dijaga di dalam contract. Host menolak `limit` bernilai nol, dan
-/// permintaan yang terlalu besar akan menghabiskan anggaran pemindaian.
+/// The limit is clamped inside the contract. The host rejects a `limit` of zero,
+/// and an over-large request would exhaust the scan budget.
 pub fn clamp_limit(limit: Option<u32>) -> u32 {
     match limit {
-        None | Some(0) => LIMIT_BAWAAN,
-        Some(n) if n > LIMIT_TERTINGGI => LIMIT_TERTINGGI,
+        None | Some(0) => DEFAULT_LIMIT,
+        Some(n) if n > MAX_LIMIT => MAX_LIMIT,
         Some(n) => n,
     }
 }
 
-/// Tentukan titik awal pemindaian. Nilai dari pemanggil hanya diterima bila
-/// masih berada di dalam rentang awalan receipt.
+/// Decide where the scan starts. A caller-supplied value is accepted only if it
+/// still falls inside the receipt-prefix range.
 pub fn scan_start(start: &Option<String>) -> Vec<u8> {
     match start {
         Some(s) if s.as_bytes().starts_with(PREFIX) => s.as_bytes().to_vec(),
@@ -43,13 +43,13 @@ pub fn scan_start(start: &Option<String>) -> Vec<u8> {
     }
 }
 
-/// Titik masuk yang dipanggil `lib.rs`.
+/// Entry point called from `lib.rs`.
 pub fn list_receipts(input: &[u8]) -> Result<Vec<u8>, String> {
     let req: ListReq = if input.is_empty() {
         ListReq::default()
     } else {
         serde_json::from_slice(input)
-            .map_err(|e| format!("list-receipts: masukan tidak sah: {e}"))?
+            .map_err(|e| format!("list-receipts: invalid input: {e}"))?
     };
 
     #[cfg(target_arch = "wasm32")]
@@ -61,7 +61,7 @@ pub fn list_receipts(input: &[u8]) -> Result<Vec<u8>, String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = req;
-        Err("list_receipts hanya berjalan pada target wasm32".to_string())
+        Err("list_receipts only runs on the wasm32 target".to_string())
     }
 }
 
@@ -82,29 +82,28 @@ mod wasm {
             &PREFIX_END.to_vec(),
             limit,
         )
-        .map_err(|e| format!("list-receipts: gagal memindai {map}: {e}"))?;
+        .map_err(|e| format!("list-receipts: could not scan {map}: {e}"))?;
 
         let mut receipts: Vec<Value> = Vec::with_capacity(rows.len());
-        let mut terakhir: Option<String> = None;
+        let mut last_key: Option<String> = None;
         for (key, value) in &rows {
-            terakhir = Some(String::from_utf8_lossy(key).to_string());
+            last_key = Some(String::from_utf8_lossy(key).to_string());
 
-            // Nilai yang cukup besar tidak disimpan apa adanya. Host
-            // memindahkannya ke penyimpanan beralamat-isi dan menaruh penunjuk
-            // di barisnya, berupa magic `T3VR` diikuti JSON yang memuat
-            // `value_cid`.
+            // Values above a certain size are not stored as-is. The host moves
+            // them into content-addressed storage and leaves a pointer in the row:
+            // the magic `T3VR` followed by JSON holding a `value_cid`.
             //
-            // Yang penting: `kv-store.get` menyelesaikan penunjuk itu sendiri dan
-            // memulangkan nilai aslinya, sedangkan `kv-store.scan` memulangkan
-            // penunjuknya mentah. Komentar WIT `scan` menjanjikan pasangan kunci
-            // dan nilai, tanpa menyebut kemungkinan ini. Jadi contract yang
-            // memindai lalu membaca hasilnya dengan cara yang sama seperti hasil
-            // `get` akan gagal tanpa satu pun galat dari host.
-            // Lihat temuan T-14 di docs/BUGS.md.
+            // The part that matters: `kv-store.get` resolves that pointer itself
+            // and returns the original value, while `kv-store.scan` returns the
+            // pointer raw. The WIT comment for `scan` promises key/value pairs and
+            // says nothing about this possibility. So a contract that scans and
+            // then parses the result the way it parses a `get` result fails with no
+            // error at all from the host.
+            // See finding T-14 in docs/BUGS.md.
             const MAGIC_CAS: &[u8] = b"T3VR";
 
-            let dari_cas = value.starts_with(MAGIC_CAS);
-            let bahan: Vec<u8> = if value.is_empty() || dari_cas {
+            let from_cas = value.starts_with(MAGIC_CAS);
+            let payload: Vec<u8> = if value.is_empty() || from_cas {
                 match kv_store::get(&map, key) {
                     Ok(Some(v)) => v,
                     Ok(None) => Vec::new(),
@@ -114,20 +113,20 @@ mod wasm {
                 value.clone()
             };
 
-            match serde_json::from_slice::<Value>(&bahan) {
+            match serde_json::from_slice::<Value>(&payload) {
                 Ok(v) => receipts.push(v),
                 Err(e) => receipts.push(json!({
-                    "receipt_id": terakhir,
-                    "error": format!("baris tersimpan tidak terbaca: {e}"),
-                    "dari_penunjuk_cas": dari_cas,
+                    "receipt_id": last_key,
+                    "error": format!("stored row could not be parsed: {e}"),
+                    "from_cas_pointer": from_cas,
                 })),
             }
         }
 
-        // Bila hasilnya menyentuh batas, masih mungkin ada sisa. Titik lanjut
-        // dikembalikan apa adanya; pemanggil yang memutuskan mau melanjutkan.
+        // If the result hit the limit there may be more. The continuation point is
+        // returned as-is; the caller decides whether to follow it.
         let next_start = if rows.len() as u32 == limit {
-            terakhir
+            last_key
         } else {
             None
         };
@@ -147,17 +146,17 @@ mod tests {
 
     #[test]
     fn batas_bawaan_dipakai_saat_tidak_disebut() {
-        assert_eq!(clamp_limit(None), LIMIT_BAWAAN);
+        assert_eq!(clamp_limit(None), DEFAULT_LIMIT);
     }
 
     #[test]
     fn nol_diganti_batas_bawaan_karena_host_menolaknya() {
-        assert_eq!(clamp_limit(Some(0)), LIMIT_BAWAAN);
+        assert_eq!(clamp_limit(Some(0)), DEFAULT_LIMIT);
     }
 
     #[test]
     fn batas_yang_kelewat_besar_dipangkas() {
-        assert_eq!(clamp_limit(Some(10_000)), LIMIT_TERTINGGI);
+        assert_eq!(clamp_limit(Some(10_000)), MAX_LIMIT);
     }
 
     #[test]
@@ -175,7 +174,7 @@ mod tests {
         assert_eq!(
             scan_start(&Some("zzz_lain".to_string())),
             PREFIX.to_vec(),
-            "titik awal asing tidak boleh membawa pemindaian keluar rentang receipt"
+            "a foreign start point must not carry the scan outside the receipt range"
         );
     }
 
@@ -194,14 +193,14 @@ mod tests {
 
     #[test]
     fn masukan_kosong_dianggap_permintaan_bawaan() {
-        // Masukan kosong tidak boleh menjadi galat penguraian; jalur non-wasm
-        // yang kemudian menolaknya.
+        // Empty input must not become a parse error; the non-wasm path is what
+        // rejects it afterwards.
         let err = list_receipts(b"").unwrap_err();
         assert!(err.contains("wasm32"));
     }
 
     #[test]
     fn masukan_rusak_ditolak_sebagai_galat_penguraian() {
-        assert!(list_receipts(b"{rusak").unwrap_err().contains("tidak sah"));
+        assert!(list_receipts(b"{corrupt").unwrap_err().contains("invalid input"));
     }
 }

@@ -53,9 +53,9 @@ verifier, not asserted.
 | Environment | `sandbox` (same node as `testnet`) |
 | Node | `https://cn-api.sg.testnet.t3n.terminal3.io` |
 | Operator manifest | signed `2026-08-11T14:14:45Z`, 3 peers, 1 RTMR3 measurement |
-| Credits granted | 20,000 (`available: 19939779025` after this work) |
+| Credits granted | 20,000 (`available: 3502747402` after repeated registrations) |
 | Contract | `z:f21dce7928980eeea7dc93618b91f602a80fe1c4:nullstamp` |
-| Contract ids used | 615, 617, 618, 619, 620 (one per registration) |
+| Contract ids used | 615, 617, 618, 619, 620, 621, 638, 639 — one per registration (finding T-13) |
 | SDK | `@terminal3/t3n-sdk@4.35.1` |
 | Rust | 1.89.0, target `wasm32-wasip2` |
 | wasm-tools | 1.255.0 |
@@ -284,26 +284,26 @@ and 620. `maps.update` fixes it and appears in no documentation page.
 ```
 target        : https://postman-echo.com/post
 declared      : first_name, last_name
-body sent     : {"keperluan":"peragaan_nullstamp",
+body sent     : {"reason":"nullstamp_demo",
                  "first_name":"{{profile.first_name}}",
                  "last_name":"{{profile.last_name}}"}
 
 {
   "core": {
-    "contract_id": 620,
-    "contract_version": "0.1.4",
+    "contract_id": 639,
+    "contract_version": "0.1.7",
     "fields_used": [ "first_name", "last_name" ],
-    "issued_at_secs": 1786536293,
+    "issued_at_secs": 1786554217,
     "method": "POST",
-    "request_body_sha256": "a9696e7e563ccb347d6d5be12958a6f1252138e9496d6c0a6f8315eed9b0e5f8",
-    "response_body_sha256": "fa52487c9cdc6a0bdede5f63b4c4ce02a1738c7e575eb6781c2ec53a34178129",
+    "request_body_sha256": "26e5ee62768086e9213455818dbc5d17b41356f41f3d36ac92979a9059cffc6b",
+    "response_body_sha256": "af8e3bce0cd50618030d03a18241046b5b8c8e41c173b6400eb754568a8528f2",
     "response_code": 200,
-    "seq_no": 112736,
+    "seq_no": 114186,
     "target_host": "postman-echo.com",
     ...
   },
-  "digest_sha256": "5bd9c8970986c53d5ec82043da41471095ad881c3456dc81415acd65cb8886ea",
-  "receipt_id": "rcpt_5bd9c8970986c53d5ec82043"
+  "digest_sha256": "8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3",
+  "receipt_id": "rcpt_8fb056c99bbea7e655d72075"
 }
 ```
 
@@ -314,14 +314,14 @@ only field **names** — the values are absent and cannot be present.
 Verification inside the enclave:
 
 ```
-{ "valid": true, "receipt_id": "rcpt_5bd9c8970986c53d5ec82043", "reason": null }
+{ "valid": true, "receipt_id": "rcpt_8fb056c99bbea7e655d72075", "reason": null }
 ```
 
 The contract's own log, which names the field count and never the values:
 
 ```
 "nullstamp: calling POST postman-echo.com for peragaan_penerbitan_bukti with 2 profile fields"
-"nullstamp: receipt rcpt_5bd9c8970986c53d5ec82043 issued, upstream status 200"
+"nullstamp: receipt rcpt_8fb056c99bbea7e655d72075 issued, upstream status 200"
 ```
 
 **[Screenshot 8: `npm run step:07` full receipt]**
@@ -359,9 +359,9 @@ I exported the live receipt above and checked it with a separate TypeScript
 program that imports no SDK, opens no session, and makes no network request:
 
 ```
-receipt_id      : rcpt_5bd9c8970986c53d5ec82043
-digest recorded : 5bd9c8970986c53d5ec82043da41471095ad881c3456dc81415acd65cb8886ea
-digest computed : 5bd9c8970986c53d5ec82043da41471095ad881c3456dc81415acd65cb8886ea
+receipt_id      : rcpt_8fb056c99bbea7e655d72075
+digest recorded : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
+digest computed : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
 
 RESULT: valid. Digest recomputed outside the node and it matches.
 ```

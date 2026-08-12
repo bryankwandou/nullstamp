@@ -16,8 +16,8 @@ test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 $ cargo build --target wasm32-wasip2 --release
-    Finished `release` profile [optimized] target(s) in 8.80s
-252868 bytes  target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
+    Finished `release` profile [optimized] target(s) in 9.83s
+252806 bytes  target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
 ```
 
 No compiler warnings. Well inside the tenant quota of `max_wasm_bytes: 1048576`.
@@ -33,7 +33,7 @@ world root {
   import host:interfaces/kv-store@2.1.0;
   import host:interfaces/http-with-placeholders@2.1.0;
   ...
-  export z:tenant-nullstamp/contracts@0.1.5;
+  export z:tenant-nullstamp/contracts@0.1.7;
 }
 ```
 
@@ -105,7 +105,7 @@ tenant already active — the SSO claim page had already done it.
 re-claim skipped, because tenant.claim() on an active tenant answers 500.
 
 credit balance:
-  available : 19939779025
+  available : 3502747402
   reserved  : 0
 
 quotas that bound the work ahead:
@@ -122,21 +122,22 @@ The skip is not laziness — see finding T-11.
 
 ```
 $ npm run step:03
-wasm size      : 252868 bytes
+size          : 252806 bytes
+registering nullstamp version 0.1.7...
 canonical name : z:f21dce7928980eeea7dc93618b91f602a80fe1c4:nullstamp
-contract id    : 621
+contract id   : 639
 
 $ npm run step:04
 created : z:f21dce…:secrets   -> active
 created : z:f21dce…:receipts  -> active
 
 $ npm run step:04b
-effective contract id : 621
-  readers & writers now restricted to contract 621
+effective contract id : 639
+  readers & writers now restricted to contract 639
 
 $ npm run step:05
 seeded  : z:f21dce…:secrets / upstream_api_key
-read back, 36 characters
+read back, length 36 characters
 
 $ npm run step:06
 functions      : issue-receipt, verify-receipt, list-receipts
@@ -161,26 +162,26 @@ body sent     : {"reason":"nullstamp_demo",
 
 {
   "core": {
-    "contract_id": 621,
-    "contract_version": "0.1.5",
+    "contract_id": 639,
+    "contract_version": "0.1.7",
     "extracted_pointers": [ "/json/reason" ],
     "fields_used": [ "first_name", "last_name" ],
-    "issued_at_secs": 1786537397,
+    "issued_at_secs": 1786554217,
     "method": "POST",
     "purpose": "receipt_issuance_demo",
     "request_body_sha256": "26e5ee62768086e9213455818dbc5d17b41356f41f3d36ac92979a9059cffc6b",
     "response_body_sha256": "af8e3bce0cd50618030d03a18241046b5b8c8e41c173b6400eb754568a8528f2",
     "response_code": 200,
     "schema": "nullstamp.receipt.v1",
-    "seq_no": 112964,
+    "seq_no": 114186,
     "subject_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4",
     "target_host": "postman-echo.com",
     "target_url": "https://postman-echo.com/post",
     "tenant_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4"
   },
-  "digest_sha256": "4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe",
+  "digest_sha256": "8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3",
   "extracted": { "/json/reason": "nullstamp_demo" },
-  "receipt_id": "rcpt_4d8790a69bad4bbfd53c757f",
+  "receipt_id": "rcpt_8fb056c99bbea7e655d72075",
   "signature": null,
   "signing_error": "signing capability not imported; integrity rests on the claims digest"
 }
@@ -201,25 +202,35 @@ present, because the code that assembles this section never receives them.
 ```
 $ npm run step:08
 
-checking: rcpt_4d8790a69bad4bbfd53c757f
+checking: rcpt_8fb056c99bbea7e655d72075
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
 {
-  "digest_sha256": "4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe",
+  "digest_sha256": "8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3",
   "reason": null,
-  "receipt_id": "rcpt_4d8790a69bad4bbfd53c757f",
+  "receipt_id": "rcpt_8fb056c99bbea7e655d72075",
   "valid": true
 }
+
+digest matches, receipt is valid
 ```
+
+Note that this is the contract recomputing the digest from the row it stored, not
+replaying a cached answer. Section 10 does the same arithmetic outside the node and
+lands on the same value.
 
 ## 9. The trail, and the contract's own log
 
 ```
 $ npm run step:09
 
-count: 4
+count: 7
 rcpt_477609b57a71786d34613857 | POST postman-echo.com | 200 | ["first_name","last_name"]
 rcpt_4d8790a69bad4bbfd53c757f | POST postman-echo.com | 200 | ["first_name","last_name"]
 rcpt_51e9569d673ac2fc7e154fa2 | POST postman-echo.com | 200 | ["first_name","last_name"]
 rcpt_5bd9c8970986c53d5ec82043 | POST postman-echo.com | 200 | ["first_name","last_name"]
+rcpt_6dc44359e21d265d61bded90 | POST postman-echo.com | 200 | ["first_name","last_name"]
+rcpt_8fb056c99bbea7e655d72075 | POST postman-echo.com | 200 | ["first_name","last_name"]
+rcpt_b95858dd44433780f8b45abb | POST postman-echo.com | 200 | ["first_name","last_name"]
 
 $ npm run step:10
 
@@ -231,7 +242,7 @@ $ npm run step:10
     },
     {
       "level": "info",
-      "message": "nullstamp: receipt rcpt_4d8790a69bad4bbfd53c757f issued, upstream status 200"
+      "message": "nullstamp: receipt rcpt_8fb056c99bbea7e655d72075 issued, upstream status 200"
     }
   ],
   "next_seq": 1,
@@ -239,8 +250,8 @@ $ npm run step:10
 }
 ```
 
-The four receipts were issued across successive registrations of the same
-contract, and the newest deployment reads all of them.
+The seven receipts were issued across successive registrations of the same
+contract, and the newest deployment reads every one of them.
 
 The log names the field count, never the field values. That is the discipline the
 whole design exists to enforce, and it holds even in the debugging surface.
@@ -255,17 +266,17 @@ This is the part that matters, so it is not asserted — it is run.
 ```
 $ npm run step:11
 saved to    : submission/live-receipt.json
-receipt_id  : rcpt_4d8790a69bad4bbfd53c757f
-digest      : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
+receipt_id  : rcpt_8fb056c99bbea7e655d72075
+digest      : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
 target host : postman-echo.com
 fields used : ["first_name","last_name"]
-seq_no      : 112964
+seq_no      : 114186
 
 $ npm run verify:offline -- ../submission/live-receipt.json
 
-receipt_id      : rcpt_4d8790a69bad4bbfd53c757f
-digest recorded : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
-digest computed : 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe
+receipt_id      : rcpt_8fb056c99bbea7e655d72075
+digest recorded : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
+digest computed : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
 signature       : none — signing capability not imported; integrity rests on the claims digest
 
 RESULT: valid. Digest recomputed outside the node and it matches.
@@ -294,10 +305,10 @@ data than you touched. Here `fields_used` is cut from two entries to one.
 $ npm run verify:offline -- ../submission/tampered-fields.json
 
 RESULT: invalid.
-  - digest mismatch: recorded 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe,
-                     recomputed 4d90dffcfb8aea87b31b05c9f709fa7c3ef369aebedcc563ee76e055ee10817b
-  - receipt_id does not derive from digest: recorded rcpt_4d8790a69bad4bbfd53c757f,
-                                            expected rcpt_4d90dffcfb8aea87b31b05c9
+  - digest mismatch: recorded 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3,
+                     recomputed 9f2c28bea15b65b3c3507864989044b969ac7f750e0f36c8ed8a92e7e8f561ef
+  - receipt_id does not derive from digest: recorded rcpt_8fb056c99bbea7e655d72075,
+                                            expected rcpt_9f2c28bea15b65b3c3507864
 exit=1
 ```
 
@@ -307,8 +318,8 @@ exit=1
 $ npm run verify:offline -- ../submission/tampered-host.json
 
 RESULT: invalid.
-  - digest mismatch: recorded 4d8790a69bad4bbfd53c757f748e5e302c2577f827e951669d3fb01e9c3daabe,
-                     recomputed 8403e3cf61663c846f4cd3fad2ec2e1840e85fc76f58071e463338447354d39b
+  - digest mismatch: recorded 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3,
+                     recomputed 37f7ce215e46aad9c83d4ae90aa32a44e3fe237dd96d85fd1ead935de7e8b8c1
   - receipt_id does not derive from digest
 exit=1
 ```

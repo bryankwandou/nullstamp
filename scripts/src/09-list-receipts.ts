@@ -1,9 +1,12 @@
 /**
- * Langkah 9 — ambil jejak receipt.
+ * Step 9 — read the receipt trail.
  *
- * Pemindaian KV di host bersifat sekali jalan tanpa kursor, jadi contract
- * memulangkan `next_start` bila hasilnya menyentuh batas. Nilai itu bisa
- * dikirim balik sebagai `start` untuk melanjutkan.
+ * The host's KV scan is single-shot with no cursor, so the contract returns
+ * `next_start` when the result hits the limit. Send that value back as `start` to
+ * continue.
+ *
+ * Getting this step to return parseable rows required finding T-14: `scan` hands
+ * back raw CAS pointers where `get` resolves them.
  */
 import { CONTRACT_TAIL, CONTRACT_VERSION } from "./config.js";
 import { openTenantClient, openUserSession, reportError } from "./session.js";
@@ -28,7 +31,7 @@ try {
     input: { limit },
   })) as Jawaban;
 
-  console.log(`jumlah: ${hasil.count ?? 0}`);
+  console.log(`count: ${hasil.count ?? 0}`);
   for (const r of hasil.receipts ?? []) {
     const core = (r.core ?? {}) as Record<string, unknown>;
     console.log(
@@ -37,11 +40,11 @@ try {
         core.purpose,
         `${core.method} ${core.target_host}`,
         `status ${core.response_code}`,
-        `field: ${JSON.stringify(core.fields_used)}`,
+        `fields: ${JSON.stringify(core.fields_used)}`,
       ].join("  |  "),
     );
   }
-  if (hasil.next_start) console.log(`\nlanjutkan dari: ${hasil.next_start}`);
+  if (hasil.next_start) console.log(`\nresume from: ${hasil.next_start}`);
 } catch (e) {
   reportError(e);
 }

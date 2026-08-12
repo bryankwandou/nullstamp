@@ -1,10 +1,10 @@
-//! `issue-receipt` — jalankan satu panggilan keluar yang membawa marker profil,
-//! lalu terbitkan bukti atas panggilan itu.
+//! `issue-receipt` — perform one outbound call carrying profile markers, then
+//! issue a receipt covering that call.
 //!
-//! Urutannya disusun supaya tidak ada lalu lintas keluar sebelum semua aturan
-//! terpenuhi: baca masukan, samakan pengakuan field dengan isi badan permintaan,
-//! baru panggil host. Receipt terbit setelah tanggapan diterima, memuat kode
-//! status dan sidik badan, bukan isinya.
+//! The order is arranged so no traffic leaves before every rule is satisfied:
+//! read the input, reconcile the declared fields against the request body, and
+//! only then call the host. The receipt is issued after the response arrives, and
+//! carries the status code and a body fingerprint rather than the body itself.
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -13,38 +13,38 @@ use crate::canon;
 
 pub const SCHEMA: &str = "nullstamp.receipt.v1";
 
-/// Kunci bawaan tempat kredensial upstream dicari di map `secrets`.
+/// Default key under which the upstream credential is looked up in `secrets`.
 const DEFAULT_SECRET_HEADER: &str = "Authorization";
 const DEFAULT_SECRET_PREFIX: &str = "Bearer ";
 
 #[derive(Debug, Deserialize)]
 pub struct IssueReq {
-    /// Alasan panggilan ini dilakukan, dicatat apa adanya di receipt.
+    /// Why this call was made, recorded verbatim in the receipt.
     pub purpose: String,
     pub method: String,
     pub url: String,
     #[serde(default)]
     pub headers: Vec<(String, String)>,
-    /// Field profil yang pemanggil akui akan dipakai.
+    /// The profile fields the caller declares it will use.
     #[serde(default)]
     pub declared_fields: Vec<String>,
-    /// Badan permintaan, boleh memuat marker `{{profile.<field>}}`.
+    /// The request body, which may carry `{{profile.<field>}}` markers.
     #[serde(default)]
     pub body_template: Option<Value>,
-    /// Kunci di map `secrets` yang nilainya dipasang sebagai kredensial.
+    /// Key in the `secrets` map whose value is attached as the credential.
     #[serde(default)]
     pub secret_key: Option<String>,
     #[serde(default)]
     pub secret_header: Option<String>,
     #[serde(default)]
     pub secret_prefix: Option<String>,
-    /// Penunjuk JSON yang ingin ditarik dari tanggapan. Bawaannya kosong.
+    /// JSON pointers to pull out of the response. Empty by default.
     #[serde(default)]
     pub extract: Vec<String>,
 }
 
-/// Hasil pemeriksaan masukan. Semua yang dibutuhkan tahap berikutnya sudah
-/// berbentuk final di sini, jadi bagian yang menyentuh host tinggal mengeksekusi.
+/// The result of validating the input. Everything the next stage needs is already
+/// in final form here, so the host-facing part only has to execute.
 #[derive(Debug)]
 pub struct Checked {
     pub purpose: String,
@@ -61,17 +61,17 @@ pub struct Checked {
     pub extract: Vec<String>,
 }
 
-/// Periksa masukan tanpa menyentuh host sama sekali.
+/// Validate the input without touching any host interface.
 ///
-/// Bagian ini yang menegakkan janji Nullstamp. Bila pengakuan field tidak sama
-/// dengan marker yang benar-benar ada di badan permintaan, panggilan dibatalkan
-/// di sini, sebelum satu bita pun keluar.
+/// This is where Nullstamp's promise is enforced. If the declared fields do not
+/// match the markers actually present in the request body, the call is abandoned
+/// here, before a single byte goes out.
 pub fn check(input: &[u8]) -> Result<Checked, String> {
     let req: IssueReq =
-        serde_json::from_slice(input).map_err(|e| format!("issue-receipt: masukan tidak sah: {e}"))?;
+        serde_json::from_slice(input).map_err(|e| format!("issue-receipt: invalid input: {e}"))?;
 
     if req.purpose.trim().is_empty() {
-        return Err("issue-receipt: purpose tidak boleh kosong".to_string());
+        return Err("issue-receipt: purpose must not be empty".to_string());
     }
 
     let method = normalise_method(&req.method)?;
@@ -82,7 +82,7 @@ pub fn check(input: &[u8]) -> Result<Checked, String> {
         None => Vec::new(),
     };
     let body_text = core::str::from_utf8(&body_bytes)
-        .map_err(|e| format!("issue-receipt: badan permintaan bukan UTF-8: {e}"))?;
+        .map_err(|e| format!("issue-receipt: request body is not UTF-8: {e}"))?;
 
     let found = canon::collect_profile_fields(body_text)
         .map_err(|e| format!("issue-receipt: {e}"))?;
@@ -92,7 +92,7 @@ pub fn check(input: &[u8]) -> Result<Checked, String> {
     for (name, _) in &req.headers {
         if name.eq_ignore_ascii_case("authorization") {
             return Err(
-                "issue-receipt: jangan kirim header Authorization sendiri; pakai secret_key supaya kredensial tetap di dalam enclave"
+                "issue-receipt: do not send your own Authorization header; use secret_key so the credential stays inside the enclave"
                     .to_string(),
             );
         }
@@ -124,13 +124,13 @@ fn normalise_method(m: &str) -> Result<String, String> {
     let upper = m.trim().to_ascii_uppercase();
     match upper.as_str() {
         "GET" | "POST" | "PUT" | "PATCH" | "DELETE" => Ok(upper),
-        other => Err(format!("issue-receipt: metode tidak dikenal: {other}")),
+        other => Err(format!("issue-receipt: unsupported method: {other}")),
     }
 }
 
-/// Tarik penunjuk JSON yang diminta dari tanggapan. Penunjuk yang tidak ada
-/// dicatat sebagai null, bukan menggagalkan penerbitan — receipt tetap perlu
-/// terbit meski bentuk tanggapan upstream berubah.
+/// Pull the requested JSON pointers out of the response. A pointer that does not
+/// resolve is recorded as null rather than failing issuance — the receipt still
+/// needs to exist even if the upstream response shape changes.
 pub fn extract_pointers(body: &[u8], pointers: &[String]) -> Value {
     if pointers.is_empty() {
         return Value::Object(serde_json::Map::new());
@@ -144,7 +144,7 @@ pub fn extract_pointers(body: &[u8], pointers: &[String]) -> Value {
     Value::Object(out)
 }
 
-/// Titik masuk yang dipanggil `lib.rs`.
+/// Entry point called from `lib.rs`.
 pub fn issue_receipt(input: &[u8]) -> Result<Vec<u8>, String> {
     let checked = check(input)?;
 
@@ -157,7 +157,7 @@ pub fn issue_receipt(input: &[u8]) -> Result<Vec<u8>, String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = checked;
-        Err("issue_receipt hanya berjalan pada target wasm32".to_string())
+        Err("issue_receipt only runs on the wasm32 target".to_string())
     }
 }
 
@@ -172,9 +172,9 @@ mod wasm {
 
     pub fn run(c: Checked) -> Result<Value, String> {
         let tid = tenant_context::tenant_did();
-        // Catatan: `tenant-did` mengembalikan bentuk mentah 20 bita menurut
-        // WIT-nya, jadi harus di-hex dulu untuk menyusun nama map. Halaman
-        // walkthrough menyatakan sebaliknya; lihat docs/BUGS.md.
+        // Note: per its WIT, `tenant-did` returns 20 raw bytes, so it has to be
+        // hex-encoded before building a map name. The walkthrough page states the
+        // opposite; see finding T-03 in docs/BUGS.md.
         let tid_hex = hex::encode(&tid);
 
         let mut headers = c.headers.clone();
@@ -227,9 +227,9 @@ mod wasm {
 
         let sealed = receipt::seal(core)?;
 
-        // Digest ditanam di Merkle leaf transaksi. Inilah yang membuat receipt
-        // bisa diperiksa di luar node, terlepas dari ada atau tidaknya tanda
-        // tangan.
+        // The digest is planted in the transaction's Merkle leaf. That is what
+        // makes the receipt checkable outside the node, with or without a
+        // signature.
         kv_store::set_claims_digest(&sealed.digest.to_vec())
             .map_err(|e| format!("nullstamp: could not plant claims digest: {e}"))?;
 
@@ -251,19 +251,19 @@ mod wasm {
         Ok(env)
     }
 
-    /// Tanda tangan cluster tidak diambil.
+    /// No cluster signature is taken.
     ///
-    /// Versi 0.1.0 meng-import `host:interfaces/signing@2.1.0`, dan akibatnya
-    /// contract gagal diinstansiasi: setiap pemanggilan dijawab "Internal error"
-    /// HTTP 500 tanpa satu baris pun masuk log contract, termasuk pemanggilan
-    /// fungsi yang tidak menyentuh penandaan sama sekali. Antarmuka itu ada di
-    /// `host-interfaces-2.1.0/package.wit` baris 159, tetapi tampaknya tidak
-    /// diberikan kepada tenant contract. Repo acuan resmi juga tidak
-    /// meng-import-nya. Rincian pada temuan T-12 di docs/BUGS.md.
+    /// Version 0.1.0 imported `host:interfaces/signing@2.1.0`, and the contract
+    /// then failed to instantiate: every call answered "Internal error" HTTP 500
+    /// with not one line reaching the contract log, including calls to functions
+    /// that never touch signing at all. The interface is declared in
+    /// `host-interfaces-2.1.0/package.wit` at line 159, but it appears not to be
+    /// granted to tenant contracts, and the official reference repo does not import
+    /// it either. See finding T-12 in docs/BUGS.md.
     ///
-    /// Keutuhan receipt tidak bergantung pada tanda tangan ini. Digest-nya
-    /// ditambatkan lewat `kv-store.set-claims-digest`, yang menanamnya ke Merkle
-    /// leaf transaksi, dan itulah dasar pemeriksaan di luar node.
+    /// Receipt integrity does not depend on this signature. The digest is anchored
+    /// through `kv-store.set-claims-digest`, which plants it in the transaction's
+    /// Merkle leaf, and that is what verification outside the node rests on.
     fn sign_core(_digest: &[u8; 32]) -> (Option<Value>, Option<String>) {
         (
             None,
@@ -294,21 +294,21 @@ mod wasm {
         }
     }
 
-    /// Terjemahkan galat host menjadi kalimat yang bisa dibaca, tanpa pernah
-    /// menyertakan nilai profil.
+    /// Turn a host error into a readable sentence, without ever including a
+    /// profile value.
     fn describe(e: hwp::HttpError) -> String {
         match e {
             hwp::HttpError::EgressDenied(host) => format!(
-                "host {host} belum ada di grant pengguna; tambahkan lewat agent-auth-update"
+                "host {host} is not on the user grant; add it via agent-auth-update"
             ),
             hwp::HttpError::PlaceholderDenied(marker) => {
-                format!("marker {marker} tidak diizinkan")
+                format!("marker {marker} is not permitted")
             }
             hwp::HttpError::PlaceholderUnknown(field) => {
-                format!("profil pengguna belum punya field {field}")
+                format!("the user profile has no field {field}")
             }
             hwp::HttpError::PlaceholderNoUserContext => {
-                "tidak ada sesi pengguna yang terikat, marker profil tidak bisa diselesaikan"
+                "no user session is bound, so profile markers cannot be resolved"
                     .to_string()
             }
             hwp::HttpError::UpstreamError(reason) => format!("upstream: {reason}"),
@@ -355,7 +355,7 @@ mod tests {
             "body_template": { "g": "{{profile.first_name}}", "e": "{{profile.verified_contacts.email.value}}" }
         })))
         .unwrap_err();
-        assert!(err.contains("dipakai tapi tidak diakui"));
+        assert!(err.contains("used but not declared"));
     }
 
     #[test]
@@ -380,7 +380,7 @@ mod tests {
             "headers": [["authorization", "Bearer bocor"]]
         })))
         .unwrap_err();
-        assert!(err.contains("pakai secret_key"));
+        assert!(err.contains("use secret_key"));
     }
 
     #[test]
@@ -402,7 +402,7 @@ mod tests {
             "url": "https://api.duffel.com/x"
         })))
         .unwrap_err();
-        assert!(err.contains("metode tidak dikenal"));
+        assert!(err.contains("unsupported method"));
     }
 
     #[test]
@@ -413,12 +413,12 @@ mod tests {
             "url": "https://api.duffel.com/x"
         })))
         .unwrap_err();
-        assert!(err.contains("purpose tidak boleh kosong"));
+        assert!(err.contains("purpose must not be empty"));
     }
 
     #[test]
     fn masukan_bukan_json_ditolak() {
-        assert!(check(b"bukan json").unwrap_err().contains("tidak sah"));
+        assert!(check(b"not json").unwrap_err().contains("invalid input"));
     }
 
     #[test]

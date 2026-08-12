@@ -1,18 +1,18 @@
 /**
- * Langkah 4 — buat map KV yang dipakai contract.
+ * Step 4 — create the KV maps the contract uses.
  *
- * Dua map dibutuhkan. `secrets` menampung kredensial upstream, `receipts`
- * menampung bukti yang diterbitkan.
+ * Two maps are needed. `secrets` holds the upstream credential; `receipts` holds
+ * the issued receipts.
  *
- * Dua hal yang mudah membuat langkah ini gagal:
+ * Two things make this step fail easily:
  *
- * - `readers` harus disebut. Governor KV menolak secara bawaan, jadi
- *   mengosongkannya membuat contract gagal membaca map miliknya sendiri.
- * - Bentuk kawatnya hanya menerima huruf kecil, yaitu `"all"` atau
- *   `{ only: [id] }`. Bentuk berhuruf besar ditolak.
+ * - `readers` must be stated. The KV governor denies by default, so leaving it out
+ *   produces a map the contract cannot read even though it owns it.
+ * - The wire form only accepts lower case, i.e. `"all"` or `{ only: [id] }`.
+ *   Capitalised forms are rejected.
  *
- * Menjalankan ulang langkah ini aman: "map already exists" bersifat idempoten
- * dan diperlakukan sebagai keberhasilan.
+ * Re-running this step is safe: "map already exists" is idempotent and treated as
+ * success. After any re-registration of the contract, run step 04b as well.
  */
 import { MAP_RECEIPTS, MAP_SECRETS } from "./config.js";
 import { openTenantClient, openUserSession, reportError } from "./session.js";
@@ -39,7 +39,7 @@ try {
         writers: { only: [contractId] },
         readers: { only: [contractId] },
       });
-      console.log(`dibuat  : ${nama}`);
+      console.log(`created : ${nama}`);
       dibuat.push(nama);
     } catch (e) {
       if (sudahAda(e)) {

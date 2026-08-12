@@ -1,9 +1,9 @@
-//! `verify-receipt` — hitung ulang digest sebuah receipt dan bandingkan dengan
-//! digest yang tercatat saat penerbitan.
+//! `verify-receipt` — recompute a receipt's digest and compare it against the
+//! digest recorded at issuance.
 //!
-//! Pemeriksaan intinya murni: diberi sampul receipt, siapa pun bisa menyusun
-//! ulang bentuk kanonik `core` dan melihat apakah digest-nya cocok. Fungsi yang
-//! sama dipakai contract di dalam enclave dan bisa dijalankan ulang di luar node.
+//! The check itself is pure: given a receipt envelope, anyone can re-render the
+//! canonical form of `core` and see whether the digest agrees. The contract uses
+//! this function inside the enclave, and the same logic runs outside the node.
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -15,44 +15,44 @@ pub struct VerifyReq {
     pub receipt_id: String,
 }
 
-/// Alasan sebuah receipt dinyatakan tidak sah.
+/// Why a receipt was judged invalid.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Mismatch {
-    /// Sampul tidak punya lapis `core`.
+    /// The envelope has no `core` layer.
     CoreHilang,
-    /// Sampul tidak punya `digest_sha256`.
+    /// The envelope has no `digest_sha256`.
     DigestHilang,
-    /// Digest yang dihitung ulang berbeda dari yang tercatat.
+    /// The recomputed digest differs from the recorded one.
     DigestBerbeda { tercatat: String, dihitung: String },
-    /// Identitas receipt tidak sesuai digest-nya.
+    /// The receipt identity does not derive from its digest.
     IdentitasTidakSesuai { tercatat: String, dihitung: String },
 }
 
 impl core::fmt::Display for Mismatch {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Mismatch::CoreHilang => write!(f, "sampul receipt tidak memuat core"),
-            Mismatch::DigestHilang => write!(f, "sampul receipt tidak memuat digest_sha256"),
+            Mismatch::CoreHilang => write!(f, "receipt envelope has no core"),
+            Mismatch::DigestHilang => write!(f, "receipt envelope has no digest_sha256"),
             Mismatch::DigestBerbeda {
                 tercatat,
                 dihitung,
             } => write!(
                 f,
-                "digest tidak cocok: tercatat {tercatat}, dihitung ulang {dihitung}"
+                "digest mismatch: recorded {tercatat}, recomputed {dihitung}"
             ),
             Mismatch::IdentitasTidakSesuai {
                 tercatat,
                 dihitung,
             } => write!(
                 f,
-                "receipt_id tidak sesuai digest: tercatat {tercatat}, seharusnya {dihitung}"
+                "receipt_id does not derive from digest: recorded {tercatat}, expected {dihitung}"
             ),
         }
     }
 }
 
-/// Periksa satu sampul receipt. Tidak menyentuh host, jadi bisa dijalankan di
-/// mana saja termasuk di sisi pengguna.
+/// Check one receipt envelope. Touches no host interface, so it runs anywhere,
+/// including on the data owner's own machine.
 pub fn check_envelope(env: &Value) -> Result<[u8; 32], Mismatch> {
     let core = env.get("core").ok_or(Mismatch::CoreHilang)?;
     if core.is_null() {
@@ -86,7 +86,7 @@ pub fn check_envelope(env: &Value) -> Result<[u8; 32], Mismatch> {
     Ok(dihitung)
 }
 
-/// Bentuk jawaban yang dikembalikan ke pemanggil.
+/// The response shape returned to the caller.
 pub fn report(receipt_id: &str, hasil: Result<[u8; 32], Mismatch>) -> Value {
     match hasil {
         Ok(d) => json!({
@@ -104,12 +104,12 @@ pub fn report(receipt_id: &str, hasil: Result<[u8; 32], Mismatch>) -> Value {
     }
 }
 
-/// Titik masuk yang dipanggil `lib.rs`.
+/// Entry point called from `lib.rs`.
 pub fn verify_receipt(input: &[u8]) -> Result<Vec<u8>, String> {
     let req: VerifyReq = serde_json::from_slice(input)
-        .map_err(|e| format!("verify-receipt: masukan tidak sah: {e}"))?;
+        .map_err(|e| format!("verify-receipt: invalid input: {e}"))?;
     if req.receipt_id.trim().is_empty() {
-        return Err("verify-receipt: receipt_id tidak boleh kosong".to_string());
+        return Err("verify-receipt: receipt_id must not be empty".to_string());
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -120,7 +120,7 @@ pub fn verify_receipt(input: &[u8]) -> Result<Vec<u8>, String> {
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        Err("verify_receipt hanya berjalan pada target wasm32".to_string())
+        Err("verify_receipt only runs on the wasm32 target".to_string())
     }
 }
 
@@ -134,11 +134,11 @@ mod wasm {
         let map = format!("z:{tid_hex}:receipts");
 
         let bytes = kv_store::get(&map, receipt_id.as_bytes())
-            .map_err(|e| format!("verify-receipt: gagal membaca {map}: {e}"))?
-            .ok_or_else(|| format!("verify-receipt: {receipt_id} tidak ada di {map}"))?;
+            .map_err(|e| format!("verify-receipt: could not read {map}: {e}"))?
+            .ok_or_else(|| format!("verify-receipt: {receipt_id} is not present in {map}"))?;
 
         let env: Value = serde_json::from_slice(&bytes)
-            .map_err(|e| format!("verify-receipt: baris tersimpan rusak: {e}"))?;
+            .map_err(|e| format!("verify-receipt: stored row is corrupt: {e}"))?;
 
         Ok(report(receipt_id, check_envelope(&env)))
     }
@@ -213,8 +213,8 @@ mod tests {
         env["core"]["purpose"] = json!("tujuan_lain");
         let baru = canon::digest_of(&env["core"]).unwrap();
         env["digest_sha256"] = json!(hex::encode(baru));
-        // Digest kini konsisten dengan core, tetapi receipt_id lama tidak lagi
-        // turun dari digest itu.
+        // The digest now agrees with core, but the old receipt_id no longer
+        // derives from that digest.
         assert!(matches!(
             check_envelope(&env).unwrap_err(),
             Mismatch::IdentitasTidakSesuai { .. }
@@ -240,7 +240,7 @@ mod tests {
         env["core"]["seq_no"] = json!(10);
         let out = report("rcpt_x", check_envelope(&env));
         assert_eq!(out["valid"], false);
-        assert!(out["reason"].as_str().unwrap().contains("digest tidak cocok"));
+        assert!(out["reason"].as_str().unwrap().contains("digest mismatch"));
     }
 
     #[test]
@@ -257,6 +257,6 @@ mod tests {
         let input = serde_json::to_vec(&json!({ "receipt_id": "  " })).unwrap();
         assert!(verify_receipt(&input)
             .unwrap_err()
-            .contains("tidak boleh kosong"));
+            .contains("must not be empty"));
     }
 }

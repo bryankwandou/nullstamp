@@ -1,10 +1,9 @@
 /**
- * Titipan keadaan antar langkah.
+ * State carried between steps.
  *
- * Tiap langkah dijalankan sebagai proses terpisah supaya kegagalan bisa
- * dilokalisasi dan layar hasilnya mudah difoto. Nilai yang perlu dibawa ke
- * langkah berikutnya, seperti DID tenant dan nomor contract, disimpan di berkas
- * ini. Kunci pengembang tidak pernah ikut tersimpan.
+ * Each step runs as its own process so failures stay localised and each result
+ * screen is easy to screenshot. Values the next step needs — the tenant DID, the
+ * contract id — are kept in this file. The developer key is never written here.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -34,7 +33,7 @@ export function readState(): RunState {
     return JSON.parse(readFileSync(STATE_PATH, "utf8")) as RunState;
   } catch {
     // Berkas rusak lebih baik diabaikan daripada menghentikan langkah; isinya
-    // memang bisa dibangun ulang dari awal.
+    // can simply be rebuilt from scratch.
     return {};
   }
 }

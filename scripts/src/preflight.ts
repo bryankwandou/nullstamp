@@ -1,10 +1,10 @@
 /**
- * Pemeriksaan pendahuluan.
+ * Preflight checks.
  *
- * Semua yang bisa diperiksa tanpa kunci pengembang diperiksa di sini: versi
- * perkakas, keberadaan berkas WASM, keterjangkauan node, dan keabsahan manifest
- * operator. Menjalankan ini lebih dulu memisahkan kegagalan lingkungan dari
- * kegagalan yang benar-benar berasal dari layanan.
+ * Everything checkable without a developer key is checked here: tool versions, the
+ * WASM file, node reachability, and the operator manifest signature. Running this
+ * first separates environment failures from failures that genuinely come from the
+ * service.
  */
 import { existsSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -80,7 +80,7 @@ try {
   if (peers > 0 && rtmr > 0) {
     lolos(
       "manifest operator",
-      `tanda tangan sah, ${peers} peer, ${rtmr} pengukuran RTMR3`,
+      `tanda tangan sah, ${peers} peers, ${rtmr} RTMR3 measurement(s)`,
     );
     const src = anchor.source as Record<string, unknown> | undefined;
     if (src?.signed_at) lolos("waktu penandatanganan", String(src.signed_at));

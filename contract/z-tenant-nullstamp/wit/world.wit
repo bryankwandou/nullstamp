@@ -1,38 +1,38 @@
 /// z-tenant-nullstamp WIT world — verifiable consent receipts for agent calls.
 ///
-/// Nullstamp menerbitkan bukti untuk setiap panggilan pihak ketiga yang
-/// menyentuh data pribadi seseorang. Bukti itu menyebut field apa yang dirujuk,
-/// ke host mana dikirim, dan hasilnya — tanpa pernah memuat nilai field-nya.
+/// Nullstamp issues a receipt for every third-party call that touches a person's
+/// data. The receipt names which fields were referenced, which host received
+/// them, and what came back — without ever holding the field values.
 ///
-/// Host capability yang dipakai:
+/// Host capabilities used:
 ///   - tenant-context:         tenant DID, contract id, calling user DID,
-///                             cluster timestamp, seq no
-///   - logging:                jejak eksekusi tanpa PII
-///   - kv-store:               simpan receipt, plus set-claims-digest yang
-///                             menempelkan digest ke Merkle leaf sehingga
-///                             receipt bisa diverifikasi di luar node
-///   - http-with-placeholders: panggilan keluar yang membawa marker
-///                             `{{profile.<field>}}`; host menyelesaikannya di
-///                             dalam enclave, jadi plaintext tidak pernah masuk
-///                             memori WASM
-/// `host:interfaces/signing@2.1.0` sengaja TIDAK di-import.
+///                             cluster timestamp, sequence number
+///   - logging:                execution trace, never carrying PII
+///   - kv-store:               receipt storage, plus set-claims-digest, which
+///                             plants the digest in the transaction's Merkle leaf
+///                             so a receipt can be verified outside the node
+///   - http-with-placeholders: outbound calls carrying `{{profile.<field>}}`
+///                             markers. The host substitutes them inside the
+///                             enclave, so plaintext never enters WASM memory.
 ///
-/// Versi 0.1.0 meng-import antarmuka itu dan akibatnya contract tidak bisa
-/// diinstansiasi sama sekali: tiap pemanggilan dijawab "Internal error" HTTP 500
-/// tanpa satu baris pun masuk log contract, bahkan untuk fungsi yang tidak
-/// menyentuh penandaan. Antarmukanya ada di host-interfaces-2.1.0 baris 159,
-/// tetapi tampaknya tidak diberikan kepada tenant contract, dan repo acuan resmi
-/// juga tidak meng-import-nya. Lihat temuan T-12 di docs/BUGS.md.
+/// `host:interfaces/signing@2.1.0` is deliberately NOT imported.
 ///
-/// Keutuhan receipt tidak bergantung padanya. Digest ditambatkan lewat
-/// `kv-store.set-claims-digest` ke Merkle leaf transaksi, dan itulah dasar
-/// pemeriksaan di luar node.
+/// Version 0.1.0 did import it, and the contract could not be instantiated at
+/// all: every call answered "Internal error" HTTP 500 with not one line reaching
+/// the contract log, including calls to functions that never touch signing. The
+/// interface is declared in host-interfaces-2.1.0 at line 159, but it appears not
+/// to be granted to tenant contracts, and the official reference repo does not
+/// import it either. See finding T-12 in docs/BUGS.md.
 ///
-/// `host:interfaces/http` biasa juga tidak di-import, kali ini murni pilihan
-/// rancangan: satu-satunya jalan keluar Nullstamp adalah http-with-placeholders,
-/// sehingga tidak ada jalur di dalam contract ini yang bisa mengirim data tanpa
-/// melewati penyelesaian marker di sisi host.
-package z:tenant-nullstamp@0.1.5;
+/// Receipt integrity does not depend on it. The digest is anchored through
+/// `kv-store.set-claims-digest` into the transaction's Merkle leaf, and that is
+/// what verification outside the node rests on.
+///
+/// Plain `host:interfaces/http` is not imported either, and that one is purely a
+/// design choice: Nullstamp's only way out is http-with-placeholders, so no path
+/// inside this contract can send data without passing through host-side marker
+/// substitution.
+package z:tenant-nullstamp@0.1.7;
 
 world tenant-nullstamp {
     import host:tenant/tenant-context@1.0.0;
@@ -44,18 +44,18 @@ world tenant-nullstamp {
 }
 
 interface contracts {
-    /// Envelope tiga field yang dipakai semua contract yang dipanggil node.
-    /// `input`        — payload JSON spesifik per fungsi.
-    /// `user-profile` — selalu None untuk tenant contract.
-    /// `context`      — DynamicContext JSON yang dicetak node.
+    /// The standard three-field envelope used by every contract the node calls.
+    /// `input`        — JSON payload specific to the function.
+    /// `user-profile` — always None for tenant contracts.
+    /// `context`      — node-minted DynamicContext JSON.
     record generic-input {
         input:        option<list<u8>>,
         user-profile: option<list<u8>>,
         context:      option<list<u8>>,
     }
 
-    /// Jalankan satu panggilan keluar memakai marker profil, lalu terbitkan
-    /// receipt atas panggilan itu.
+    /// Perform one outbound call using profile markers, then issue a receipt
+    /// covering that call.
     ///
     /// Input (JSON):
     /// {
@@ -68,23 +68,22 @@ interface contracts {
     ///   "secret_key":     "duffel_api_key"
     /// }
     ///
-    /// `declared_fields` harus sama persis dengan marker profil yang muncul di
-    /// `body_template`. Selisih apa pun ditolak sebelum ada panggilan keluar,
-    /// supaya receipt tidak bisa mengaku lebih sedikit dari yang sebenarnya
-    /// dipakai.
+    /// `declared_fields` must match the profile markers appearing in
+    /// `body_template` exactly. Any discrepancy is rejected before a single byte
+    /// goes out, so a receipt cannot claim less than what was actually used.
     ///
-    /// Output (JSON): receipt lengkap beserta digest dan tanda tangan.
+    /// Output (JSON): the full receipt with its digest and signature slot.
     issue-receipt: func(req: generic-input) -> result<list<u8>, string>;
 
-    /// Hitung ulang digest receipt yang tersimpan dan bandingkan dengan digest
-    /// yang tercatat saat penerbitan.
+    /// Recompute a stored receipt's digest and compare it against the digest
+    /// recorded at issuance.
     ///
     /// Input  (JSON): { "receipt_id": "rcpt_..." }
     /// Output (JSON): { "valid": bool, "receipt_id": string, "digest": string,
     ///                  "reason": option<string> }
     verify-receipt: func(req: generic-input) -> result<list<u8>, string>;
 
-    /// Ambil jejak receipt milik tenant ini, urut menaik menurut receipt id.
+    /// Read this tenant's receipt trail, ascending by receipt id.
     ///
     /// Input  (JSON): { "start": option<string>, "limit": u32 }
     /// Output (JSON): { "receipts": [...], "count": u32 }

@@ -1,13 +1,14 @@
 /**
- * Langkah 5 — tanam kredensial upstream ke map `secrets`.
+ * Step 5 — seed the upstream credential into the `secrets` map.
  *
- * Penulisan lewat jalur pengelolaan tenant melangkahi daftar penulis map, jadi
- * tetap berhasil meskipun map itu hanya boleh ditulis contract. Setelah tertanam,
- * satu-satunya jalan menuju nilainya adalah kode contract di dalam enclave.
+ * Writing through the tenant management surface bypasses the map's writer set, so it
+ * succeeds even when only the contract may write. Once seeded, the only route to the
+ * value is contract code running inside the enclave.
  *
- * Halaman docs menganjurkan `executeControl("map-entry-set", ...)` dengan
- * menyusun `map_name` sendiri. SDK sudah menyediakan `maps.entrySet` yang
- * menyusun nama kanoniknya sendiri, jadi jalur itu yang dipakai di sini.
+ * The docs suggest `executeControl("map-entry-set", ...)` with a hand-built
+ * `map_name`. The SDK already ships `maps.entrySet`, which builds the canonical name
+ * itself, so that is what this uses — see finding T-07 for the surface the docs
+ * leave out.
  */
 import { MAP_SECRETS } from "./config.js";
 import { openTenantClient, openUserSession, reportError } from "./session.js";
@@ -35,15 +36,15 @@ try {
   const tenant = openTenantClient(s);
 
   await tenant.maps.entrySet(MAP_SECRETS, KEY, VALUE.trim());
-  console.log(`tertanam: ${tenant.canonicalName(MAP_SECRETS)} / ${KEY}`);
+  console.log(`seeded  : ${tenant.canonicalName(MAP_SECRETS)} / ${KEY}`);
 
-  // Pembacaan ulang hanya untuk memastikan barisnya ada. Panjangnya saja yang
-  // dilaporkan; nilainya tidak dicetak.
+  // The read-back only confirms the row exists. Only its length is reported; the
+  // value itself is never printed.
   const kembali = await tenant.maps.entryGet(MAP_SECRETS, KEY);
   console.log(
     kembali === null
       ? "peringatan: baris tidak terbaca kembali"
-      : `terbaca kembali, panjang ${kembali.length} karakter`,
+      : `read back, length ${kembali.length} characters`,
   );
 } catch (e) {
   reportError(e);
