@@ -6,10 +6,12 @@ Tenant DID: did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4
 START HERE
 ================================================================================
 
-  Nullstamp-Submission.docx    The full report as a Word document. Drag this into
-                               Google Drive and it opens as a Google Doc with the
-                               formatting and all eight images intact — no copy
-                               and paste needed. 19 sections, 3 tables, 2.9 MB.
+  Nullstamp-Submission.docx    The full report as a Word document. In an existing
+                               Google Doc use File > Import document > Replace, and
+                               the whole report lands with its formatting and all
+                               twelve images embedded in the body — no copy and
+                               paste, and the Doc keeps its URL. 19 sections,
+                               3 tables, 12 images, 3.3 MB.
 
   Nullstamp-Submission.pdf     The same report as a fixed-layout PDF, 25 pages,
                                screenshots embedded. Use this if the reviewer
@@ -32,6 +34,7 @@ LIVE LINKS — all verified reachable
 ================================================================================
 
   Demo                 https://nullstamp.vercel.app
+  Walkthrough video    https://nullstamp.vercel.app/walkthrough
   Verify a receipt     https://nullstamp.vercel.app/verify
   See a rejection      https://nullstamp.vercel.app/verify?tamper=hide-field
   Findings report      https://nullstamp.vercel.app/findings
