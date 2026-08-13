@@ -6,6 +6,7 @@ import { Wordmark } from "./logo";
 
 const TAUTAN = [
   { href: "/#how-it-works", label: "How it works" },
+  { href: "/walkthrough", label: "Walkthrough" },
   { href: "/verify", label: "Verify" },
   { href: "/findings", label: "Findings" },
 ];
