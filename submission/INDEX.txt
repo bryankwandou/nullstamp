@@ -1,0 +1,141 @@
+NULLSTAMP — TERMINAL 3 ADK TESTNET ONBOARDING SUBMISSION
+Bryan Kwandou · nayrbryangaming01@gmail.com · 13 August 2026
+Tenant DID: did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4
+
+================================================================================
+START HERE
+================================================================================
+
+  Nullstamp-Submission.docx    The full report as a Word document. Drag this into
+                               Google Drive and it opens as a Google Doc with the
+                               formatting and all eight images intact — no copy
+                               and paste needed. 19 sections, 3 tables, 2.9 MB.
+
+  Nullstamp-Submission.pdf     The same report as a fixed-layout PDF, 25 pages,
+                               screenshots embedded. Use this if the reviewer
+                               would rather not open Word. 2.5 MB.
+
+  video/                       nullstamp-walkthrough.mp4 — 44 seconds, 1920x1080,
+                               eight scenes. Plus one PNG still per scene, so a
+                               single frame can go into a deck without scrubbing.
+
+  Findings-Report.pdf          All fifteen findings in full: verbatim quotes,
+                               request ids, suggested fixes, reproduction steps.
+                               8 pages.
+
+  Evidence-Report.pdf          Verbatim output of every step that was run, with
+                               notes on what each result does and does not prove.
+                               7 pages.
+
+================================================================================
+LIVE LINKS — all verified reachable
+================================================================================
+
+  Demo                 https://nullstamp.vercel.app
+  Verify a receipt     https://nullstamp.vercel.app/verify
+  See a rejection      https://nullstamp.vercel.app/verify?tamper=hide-field
+  Findings report      https://nullstamp.vercel.app/findings
+  Repository           https://github.com/bryankwandou/nullstamp
+
+The verify page recomputes a receipt's digest in the reader's own browser using
+Web Crypto. Nothing is sent to us, so the check does not require trusting us.
+
+================================================================================
+THE RECEIPT UNDER DISCUSSION
+================================================================================
+
+  live-receipt.json    A real receipt issued inside the enclave on T3N testnet.
+
+    receipt_id   rcpt_8fb056c99bbea7e655d72075
+    digest       8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
+    contract     639,  z:f21dce...:nullstamp@0.1.7
+    upstream     postman-echo.com, status 200
+    seq_no       114186   (cluster clock, not a local timestamp)
+
+  tampered-fields.json   The same receipt with one used field hidden.
+  tampered-host.json     The same receipt with the destination host swapped.
+  sample-receipt.json    A synthetic receipt for cross-language digest testing.
+
+  Check any of them yourself, with no key, no credits and no network:
+
+    cd ../scripts
+    npm install
+    npm run verify:offline -- ../submission/live-receipt.json      exits 0
+    npm run verify:offline -- ../submission/tampered-fields.json   exits 1
+
+================================================================================
+evidence/  —  18 transcripts
+================================================================================
+
+Each file begins with the command that produced it. The contents are that
+command's output, captured as it ran and never edited afterwards.
+
+  01-cargo-test.txt          54 tests pass
+  02-cargo-build.txt         WASM built, 252,806 bytes
+  03-wasm-tools.txt          Component valid, four host imports
+  04-preflight.txt           Twelve checks, none needing a developer key
+  05-step01-quickstart.txt   Handshake and authentication
+  06-step02-tenant.txt       Tenant state, balance, quotas
+  07-step03-register.txt     Contract 653 registered
+  08-step04-maps.txt         KV maps created
+  09-step04b-acl.txt         ACLs re-pointed  (finding T-13)
+  10-step05-secret.txt       Upstream credential seeded
+  11-step06-grant.txt        Authorization grant installed
+  12-step07-issue.txt        Receipt issued inside the enclave
+  13-step08-verify.txt       Verified in-enclave, valid: true
+  14-step09-list.txt         Trail of eight receipts
+  15-step10-logs.txt         The contract's own log
+  16-step11-export.txt       Where the credit grant ran out  (finding T-15)
+  17-verify-offline.txt      Digest recomputed outside the node — match, exit 0
+  18-tamper-rejected.txt     Three attacks, all rejected, exit 1
+
+================================================================================
+screenshots/  —  7 captures of the deployed site
+================================================================================
+
+Taken with headless Chrome at 2x scale.
+
+  site-01-landing.png                  Landing page
+  site-02-verify.png                   Genuine receipt: four checks green, the
+                                       digest computed in-browser matching the
+                                       digest recorded
+  site-03-findings.png                 All fifteen findings
+  site-04-rejected-hidden-field.png    A used field hidden — digest and identity
+                                       both fail
+  site-05-rejected-repaired.png        The careful attack: content edited and the
+                                       digest repaired so it agrees. The digest
+                                       check passes; identity still fails
+  site-06-rejected-swapped-host.png    Destination host swapped
+  pdf-preview-page1.png                First page of the dossier
+
+================================================================================
+video/  —  the walkthrough and its frames
+================================================================================
+
+  nullstamp-walkthrough.mp4    44.1 seconds, 1920x1080, 1320 frames at 30 fps
+  scene-01-title.png           through scene-08-close.png
+
+Built with Remotion; the source is in ../video/src/. To rebuild:
+
+    cd ../video
+    npm install
+    npm run build
+
+Two traps worth knowing if you do. Remotion's bundler needs TypeScript 5 —
+TypeScript 7 dropped ts.sys, which its esbuild loader calls, and the failure
+surfaces as an unrelated "Cannot read properties of undefined (reading
+'readFile')" deep inside webpack. And "type": "module" in the video's
+package.json breaks the bundler outright.
+
+================================================================================
+ONE CAVEAT, STATED PLAINLY
+================================================================================
+
+The tenant account is now at zero credits. Ten contract registrations exhausted
+the 20,000 grant — that is finding T-15. So steps 03 through 11 cannot be re-run
+against this DID without a top-up.
+
+Nothing in this folder depends on that. The part that matters — recomputing a
+receipt's digest and checking it — needs no credits, no session and no network.
+The empty account turned out to be an accidental proof of the whole argument:
+the node will no longer answer us, and the receipt still verifies.
