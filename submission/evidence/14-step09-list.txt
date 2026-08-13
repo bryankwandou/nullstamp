@@ -1,0 +1,14 @@
+$ npm run step:09
+
+
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+count: 8
+rcpt_03cc7f7a193196184c661f0d  |  receipt_issuance_demo  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]
+rcpt_477609b57a71786d34613857  |  peragaan_penerbitan_bukti  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]
+rcpt_4d8790a69bad4bbfd53c757f  |  receipt_issuance_demo  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]
+rcpt_51e9569d673ac2fc7e154fa2  |  peragaan_penerbitan_bukti  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]
+rcpt_5bd9c8970986c53d5ec82043  |  peragaan_penerbitan_bukti  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]
+rcpt_6dc44359e21d265d61bded90  |  receipt_issuance_demo  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]
+rcpt_8fb056c99bbea7e655d72075  |  receipt_issuance_demo  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]
+rcpt_b95858dd44433780f8b45abb  |  receipt_issuance_demo  |  POST postman-echo.com  |  status 200  |  fields: ["first_name","last_name"]

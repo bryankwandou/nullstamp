@@ -1,0 +1,32 @@
+$ wasm-tools component wit target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
+
+package root:component;
+
+world root {
+  import host:tenant/tenant-context@1.0.0;
+  import host:interfaces/logging@2.1.0;
+  import host:interfaces/kv-store@2.1.0;
+  import host:interfaces/http-with-placeholders@2.1.0;
+  import wasi:cli/environment@0.2.3;
+  import wasi:cli/exit@0.2.3;
+  import wasi:io/error@0.2.3;
+  import wasi:io/streams@0.2.3;
+  import wasi:cli/stdin@0.2.3;
+  import wasi:cli/stdout@0.2.3;
+  import wasi:cli/stderr@0.2.3;
+  import wasi:clocks/wall-clock@0.2.3;
+  import wasi:filesystem/types@0.2.3;
+  import wasi:filesystem/preopens@0.2.3;
+
+  export z:tenant-nullstamp/contracts@0.1.9;
+}
+package host:tenant@1.0.0 {
+  interface tenant-context {
+    tenant-did: func() -> list<u8>;
+
+    contract-id: func() -> u32;
+
+    calling-user-did: func() -> option<list<u8>>;
+
+    cluster-timestamp-secs: func() -> u64;
+

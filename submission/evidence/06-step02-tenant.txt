@@ -1,0 +1,26 @@
+$ npm run step:02
+
+
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+tenant DID : did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4
+
+reading tenant state first...
+  status : active
+  label  : testnet-dev
+
+tenant already active — the SSO claim page had already done it.
+re-claim skipped, because tenant.claim() on an active tenant answers 500.
+
+credit balance:
+  available : 2142485543
+  reserved  : 0
+
+quotas that bound the work ahead:
+  max_contracts               : 10
+  max_maps                    : 50
+  max_wasm_bytes              : 1048576
+  outbox_calls_per_minute_max : 10
+  fuel_per_call_max           : 50000000
+
+tenant ready. state saved to state.json

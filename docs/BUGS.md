@@ -20,12 +20,12 @@ Environment used throughout:
 | Node.js | 24.13.0 |
 | OS | Windows 11 (10.0.26200) |
 
-Fourteen findings. Five stop a new developer outright, four cause real
-confusion, four waste time, and one is a proposal rather than a defect.
+Fifteen findings. Five stop a new developer outright, five cause real confusion,
+four waste time, and one is a proposal rather than a defect.
 
-Findings T-11 through T-14 came from actually running a contract on testnet, and
-they are the ones I would read first — none of them are discoverable by reading
-the documentation.
+Findings T-11 through T-15 came from actually running a contract on testnet, and
+they are the ones I would read first — none of them are discoverable by reading the
+documentation. T-15 is the one that ended the exercise: the credit grant ran dry.
 
 ---
 
@@ -200,7 +200,7 @@ registration mints a **new** id. So the moment you re-register — which you mus
 do for any code change — all maps that allowed the old id start refusing the new
 one.
 
-Observed across six registrations of the same contract during this exercise:
+Observed across ten registrations of the same contract during this exercise:
 
 | Version | Contract id |
 |---|---|
@@ -212,9 +212,16 @@ Observed across six registrations of the same contract during this exercise:
 | 0.1.5 | 621 |
 | 0.1.6 | 638 |
 | 0.1.7 | 639 |
+| 0.1.8 | 641 |
+| 0.1.9 | 653 |
 
 Note that the ids are neither contiguous nor predictable — 621 to 638 skips
-sixteen. So there is no way to precompute the next one and pre-authorise it.
+sixteen, and 641 to 653 skips twelve. So there is no way to precompute the next one
+and pre-authorise it.
+
+Ten registrations is also what exhausted the credit grant, which is finding T-15.
+The two compound: iterating on a contract forces re-registration, re-registration
+forces an ACL fix-up, and the registrations themselves drain the allowance.
 
 Maps created against 615 rejected 617 with:
 
@@ -283,6 +290,59 @@ with `get`. See `contract/z-tenant-nullstamp/src/list.rs`.
 in the WIT comment that scanned values may be pointers and must be resolved with
 a follow-up `get`. The current signature promises something it does not always
 deliver.
+
+---
+
+### T-15 — The credit grant is spent far faster than the claim page implies
+
+The claim page advertises the 20,000 test credit grant as "enough for 25 agents and
+~5,000 protected actions". In practice this exercise exhausted it completely with
+ten contract registrations and roughly a dozen contract calls.
+
+The account ended at zero, and the node then refuses further work:
+
+```
+InsufficientCredit (account=f21dce7928980eeea7dc93618b91f602a80fe1c4,
+                    required=10000000000, available=0)
+[824ac0e3-0a2d-4d4a-b1d4-d1733f9e28a4]
+```
+
+Note the shape of that number. A single contract execution asks to lock
+**10,000,000,000** against a total grant of 20,000,000,000, so on the face of it the
+entire allowance covers two concurrent calls. Balances read from `getBalance()` along
+the way:
+
+| Point in the exercise | `available` |
+|---|---|
+| Start | 19,989,922,328 |
+| After the first receipt | 19,939,779,025 |
+| After v0.1.5 | 8,078,980,220 |
+| After v0.1.7 | 3,502,747,402 |
+| After v0.1.9 | 0 |
+
+The largest single drop coincides with a run of re-registrations, which is worth
+connecting to finding T-13: because contract ids are minted per registration and map
+ACLs bind to the id, iterating on a contract *forces* repeated registration. So the
+two findings compound — the workflow the platform requires is the workflow that
+drains the grant.
+
+Nothing warns you as the balance falls, and the failure arrives as a hard stop
+mid-pipeline rather than as a warning at 20% remaining.
+
+**Suggested fix.** Three things, in order of value:
+
+- State the real cost of a registration and of a call on the claim page, or express
+  the grant in the same units as the quotas so the two can be compared.
+- Warn on `getBalance()` or in the register response when the remaining balance is
+  below a few calls' worth.
+- Reconsider the per-call lock. Locking half the total grant for one execution makes
+  the advertised "~5,000 protected actions" unreachable by construction.
+
+Worth saying: this one cost me the tail of the exercise. The final pipeline run
+completed steps 01 through 10 and died on step 11, which is only an export helper.
+The receipt itself was already exported and remains verifiable — offline
+verification needs no credits at all, which is the one silver lining and, in fairness,
+a decent advertisement for the design.
 
 ---
 

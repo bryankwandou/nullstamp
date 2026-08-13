@@ -1,0 +1,45 @@
+$ npm run step:07
+
+
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+target        : https://postman-echo.com/post
+declared      : first_name, last_name
+body sent     : {"reason":"nullstamp_demo","first_name":"{{profile.first_name}}","last_name":"{{profile.last_name}}"}
+
+calling issue-receipt...
+
+{
+  "core": {
+    "contract_id": 653,
+    "contract_version": "0.1.9",
+    "extracted_pointers": [
+      "/json/reason"
+    ],
+    "fields_used": [
+      "first_name",
+      "last_name"
+    ],
+    "issued_at_secs": 1786585628,
+    "method": "POST",
+    "purpose": "receipt_issuance_demo",
+    "request_body_sha256": "26e5ee62768086e9213455818dbc5d17b41356f41f3d36ac92979a9059cffc6b",
+    "response_body_sha256": "af8e3bce0cd50618030d03a18241046b5b8c8e41c173b6400eb754568a8528f2",
+    "response_code": 200,
+    "schema": "nullstamp.receipt.v1",
+    "seq_no": 115776,
+    "subject_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4",
+    "target_host": "postman-echo.com",
+    "target_url": "https://postman-echo.com/post",
+    "tenant_did": "f21dce7928980eeea7dc93618b91f602a80fe1c4"
+  },
+  "digest_sha256": "03cc7f7a193196184c661f0da0352974dd3f562c2dcccb2639a2f38fdff97079",
+  "extracted": {
+    "/json/reason": "nullstamp_demo"
+  },
+  "receipt_id": "rcpt_03cc7f7a193196184c661f0d",
+  "signature": null,
+  "signing_error": "signing capability not imported; integrity rests on the claims digest"
+}
+
+receipt stored: rcpt_03cc7f7a193196184c661f0d

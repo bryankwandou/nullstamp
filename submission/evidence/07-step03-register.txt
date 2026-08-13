@@ -1,0 +1,12 @@
+$ npm run step:03
+
+
+
+wasm file   : E:\000VSCODE PROJECT MULAI DARI DESEMBER 2025\nullstamp\contract\z-tenant-nullstamp\target\wasm32-wasip2\release\z_tenant_nullstamp.wasm
+size        : 252806 bytes
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+registering nullstamp version 0.1.9...
+canonical name: z:f21dce7928980eeea7dc93618b91f602a80fe1c4:nullstamp
+contract id   : 653
+
+contract id saved; the map step uses it

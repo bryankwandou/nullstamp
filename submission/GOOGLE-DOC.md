@@ -11,6 +11,9 @@
 | Browser verifier | https://nullstamp.vercel.app/verify |
 | Findings report | https://nullstamp.vercel.app/findings |
 | Findings, full text | https://github.com/bryankwandou/nullstamp/blob/main/docs/BUGS.md |
+| Submission PDF, all evidence embedded | `submission/Nullstamp-Submission.pdf` in the repo |
+| Raw captured output, 18 files | `submission/evidence/` in the repo |
+| Site screenshots, 6 files | `submission/screenshots/` in the repo |
 | Evidence, verbatim output | https://github.com/bryankwandou/nullstamp/blob/main/docs/PROOF.md |
 
 > **How to use this file:** paste the whole thing into a new Google Doc, set
@@ -28,8 +31,8 @@ case beyond the first contract.
 All four are done, and the bonus is not a proposal — it is a second TEE contract
 running on testnet.
 
-**Fourteen findings** are documented with reproduction steps. Five block a new
-developer outright. Four of the fourteen were only discoverable by running a
+**Fifteen findings** are documented with reproduction steps. Five block a new
+developer outright. Five of the fifteen were only discoverable by running a
 contract against the live network, and I would rank those as the most useful
 material in this submission:
 
@@ -38,6 +41,7 @@ material in this submission:
   opaque 500 and an empty contract log
 - every contract re-registration silently invalidates every map ACL
 - `kv-store.scan` hands back raw CAS pointers where `kv-store.get` resolves them
+- the 20,000 credit grant was exhausted by ten registrations
 
 The use case, **Nullstamp**, issues verifiable receipts for agent calls that touch
 personal data. Its central claim — that a receipt can be recomputed by anyone
@@ -379,7 +383,7 @@ the receipt yourself and watch verification refuse it.
 **[Screenshot 10: browser verifier, valid state]**
 **[Screenshot 11: browser verifier after tampering, invalid state]**
 
-## 12. All fourteen findings
+## 12. All fifteen findings
 
 Full text with verbatim quotes and reproduction steps:
 https://github.com/bryankwandou/nullstamp/blob/main/docs/BUGS.md
@@ -393,6 +397,7 @@ https://github.com/bryankwandou/nullstamp/blob/main/docs/BUGS.md
 | T-12 | blocker | Importing `signing@2.1.0` makes the contract fail to instantiate. Registration succeeds; every call then returns an opaque 500 with an empty contract log |
 | T-13 | confusing | Contract ids are per registration and map ACLs bind to the id, so every re-register silently invalidates every ACL |
 | T-14 | confusing | `kv-store.scan` returns raw `T3VR` CAS pointers where `get` resolves them; no error, not in the WIT |
+| T-15 | confusing | 20,000 credit grant exhausted by ten registrations, against an advertised "~5,000 protected actions". One call locks 10,000,000,000 of a 20,000,000,000 grant |
 | T-04 | confusing | The tenant claim step is not documented anywhere |
 | T-05 | confusing | `maps.create` needs a `contractId` that only exists after registration, which the Walkthrough sequences later |
 | T-06 | confusing | SDK install reports 4 advisories, 1 critical (Zip Slip in `decompress` via `jco`) |

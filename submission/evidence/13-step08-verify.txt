@@ -1,0 +1,14 @@
+$ npm run step:08
+
+
+
+checking: rcpt_03cc7f7a193196184c661f0d
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+{
+  "digest_sha256": "03cc7f7a193196184c661f0da0352974dd3f562c2dcccb2639a2f38fdff97079",
+  "reason": null,
+  "receipt_id": "rcpt_03cc7f7a193196184c661f0d",
+  "valid": true
+}
+
+digest matches, receipt is valid

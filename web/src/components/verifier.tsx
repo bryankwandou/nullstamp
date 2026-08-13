@@ -82,6 +82,27 @@ export function Verifier() {
     setTeks(JSON.stringify(diubah, null, 2));
   }, []);
 
+  // The tamper selection is also readable from the query string, so a rejection can
+  // be linked to directly: /verify?tamper=hide-field. Handy for pointing someone at
+  // the failure instead of asking them to reproduce it.
+  //
+  // This runs after mount rather than in the state initialiser, because these pages
+  // are prerendered statically: `window` does not exist at build time, and an
+  // initialiser that touched it would produce a hydration mismatch. It routes through
+  // `pilih` rather than setting the state directly, since `pilih` is what actually
+  // rewrites the receipt text.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tamper");
+    const sah: Array<Pengubahan["jenis"]> = [
+      "hide-field",
+      "swap-host",
+      "repair-digest",
+    ];
+    if (t && sah.includes(t as Pengubahan["jenis"])) {
+      void pilih(t as Pengubahan["jenis"]);
+    }
+  }, [pilih]);
+
   useEffect(() => {
     let dibatalkan = false;
     setSedang(true);

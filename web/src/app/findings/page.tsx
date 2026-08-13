@@ -4,7 +4,7 @@ import { Reveal } from "@/components/reveal";
 export const metadata: Metadata = {
   title: "T3 ADK onboarding findings — Nullstamp",
   description:
-    "Fourteen findings from completing the Terminal 3 ADK Quickstart and Walkthrough and running a contract on testnet, with evidence and reproduction steps.",
+    "Fifteen findings from completing the Terminal 3 ADK Quickstart and Walkthrough and running a contract on testnet, with evidence and reproduction steps.",
 };
 
 type Weight = "blocker" | "confusing" | "time sink" | "proposal";
@@ -77,6 +77,15 @@ const FINDINGS: Array<{
     evidence: 'T3VR{"value_cid":[26,27,193,186,180,45,202,168,81,195,32,170,…',
   },
   {
+    id: "T-15",
+    weight: "confusing",
+    fromTestnet: true,
+    title: "The credit grant is spent far faster than the claim page implies",
+    body: "The claim page advertises the 20,000 test credit grant as enough for 25 agents and ~5,000 protected actions. In practice this exercise exhausted it completely with ten contract registrations and about a dozen calls. Note the shape of the numbers: one contract execution asks to lock 10,000,000,000 against a total grant of 20,000,000,000, so on the face of it the whole allowance covers two concurrent calls. Nothing warns you as the balance falls, and the failure arrives as a hard stop mid-pipeline. It compounds with T-13, because iterating on a contract forces the re-registrations that drain the grant.",
+    evidence:
+      "InsufficientCredit (account=f21dce79…, required=10000000000, available=0)\n[824ac0e3-0a2d-4d4a-b1d4-d1733f9e28a4]\n\nBalance readings: 19,989,922,328 → 19,939,779,025 → 8,078,980,220 → 3,502,747,402 → 0",
+  },
+  {
     id: "T-04",
     weight: "confusing",
     title: "The tenant claim step is not documented anywhere",
@@ -138,8 +147,8 @@ export default function Findings() {
         </h1>
         <p className="mt-5 text-[16px] leading-relaxed text-muted">
           Collected while completing the Terminal 3 ADK Quickstart and Walkthrough
-          on 12 August 2026, then extended while running a second contract end to
-          end against the live testnet. Every finding has evidence you can check:
+          on 12 August 2026, then extended while running a second contract end to end
+          against the live testnet, until the credit grant ran out. Every finding has evidence you can check:
           a file and line in the published SDK, the vendored WIT in the official
           reference repo, or verbatim output including the request id the docs ask
           for.
@@ -159,7 +168,7 @@ export default function Findings() {
           </span>
         </div>
         <p className="mt-6 rounded-[10px] border border-seal/35 bg-seal-wash/60 px-5 py-4 text-[14.5px] leading-relaxed">
-          The four marked <span className="font-medium">from testnet</span> only
+          The five marked <span className="font-medium">from testnet</span> only
           surfaced by running a contract against the live network. None of them are
           discoverable by reading the documentation, and they are the ones I would
           read first.

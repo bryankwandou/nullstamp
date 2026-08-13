@@ -1,0 +1,15 @@
+$ npm run verify:offline -- ../submission/live-receipt.json
+
+receipt_id      : rcpt_8fb056c99bbea7e655d72075
+digest recorded : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
+digest computed : 8fb056c99bbea7e655d72075e37e428c8fbaade3c79b32fb737a6c4bef82e4d3
+signature       : none — signing capability not imported; integrity rests on the claims digest
+
+RESULT: valid. Digest recomputed outside the node and it matches.
+
+$ echo $?
+0
+
+This ran with the tenant account at zero credits. No session was opened, no
+SDK was imported, and no network request was made. The receipt verifies
+anyway, which is the whole claim.

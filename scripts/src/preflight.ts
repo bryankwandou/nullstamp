@@ -39,7 +39,7 @@ const major = Number(process.versions.node.split(".")[0]);
 if (major >= 20) lolos("Node.js", `versi ${process.versions.node}`);
 else tidak("Node.js", `versi ${process.versions.node}, butuh 20 atau lebih baru`);
 
-console.log("\nBerkas contract");
+console.log("\nContract artefact");
 const wasmFile = resolve(HERE, "..", WASM_PATH);
 if (existsSync(wasmFile)) {
   const ukuran = statSync(wasmFile).size;
@@ -51,25 +51,25 @@ if (existsSync(wasmFile)) {
   );
 }
 
-console.log("\nLingkungan SDK");
-lolos("lingkungan bawaan SDK", DEFAULT_ENVIRONMENT);
-lolos("lingkungan terpilih", ENV);
+console.log("\nSDK environment");
+lolos("SDK default environment", DEFAULT_ENVIRONMENT);
+lolos("selected environment", ENV);
 setEnvironment(ENV);
 const nodeUrl = getNodeUrl();
-lolos("alamat node", nodeUrl);
+lolos("node address", nodeUrl);
 if (NODE_URLS[ENV] !== nodeUrl) {
-  tidak("kecocokan alamat", `NODE_URLS menyebut ${NODE_URLS[ENV]}`);
+  tidak("address agreement", `NODE_URLS menyebut ${NODE_URLS[ENV]}`);
 }
 
-console.log("\nKeterjangkauan node");
+console.log("\nNode reachability");
 try {
   const r = await fetch(nodeUrl + "/api/trust-manifest", {
     signal: AbortSignal.timeout(20_000),
   });
-  if (r.ok) lolos("endpoint manifest", `HTTP ${r.status}`);
-  else tidak("endpoint manifest", `HTTP ${r.status}`);
+  if (r.ok) lolos("manifest endpoint", `HTTP ${r.status}`);
+  else tidak("manifest endpoint", `HTTP ${r.status}`);
 } catch (e) {
-  tidak("endpoint manifest", (e as Error).message);
+  tidak("manifest endpoint", (e as Error).message);
 }
 
 console.log("\nAttestation");
@@ -79,45 +79,45 @@ try {
   const rtmr = anchor.rtmr3_allowlist?.length ?? 0;
   if (peers > 0 && rtmr > 0) {
     lolos(
-      "manifest operator",
-      `tanda tangan sah, ${peers} peers, ${rtmr} RTMR3 measurement(s)`,
+      "operator manifest",
+      `signature valid, ${peers} peers, ${rtmr} RTMR3 measurement(s)`,
     );
     const src = anchor.source as Record<string, unknown> | undefined;
-    if (src?.signed_at) lolos("waktu penandatanganan", String(src.signed_at));
+    if (src?.signed_at) lolos("signing time", String(src.signed_at));
   } else {
-    tidak("manifest operator", "anchor kosong");
+    tidak("operator manifest", "anchor kosong");
   }
 } catch (e) {
-  tidak("manifest operator", (e as Error).message);
+  tidak("operator manifest", (e as Error).message);
 }
 
-console.log("\nKomponen kriptografi SDK");
+console.log("\nSDK crypto component");
 try {
   await loadWasmComponent();
-  lolos("loadWasmComponent", "komponen termuat");
+  lolos("loadWasmComponent", "component loaded");
 } catch (e) {
   tidak("loadWasmComponent", (e as Error).message);
 }
 
-console.log("\nTujuan peragaan");
-lolos("alamat tujuan", TARGET_URL);
-lolos("host untuk grant", UPSTREAM_HOST);
+console.log("\nDemo destination");
+lolos("target URL", TARGET_URL);
+lolos("host for the grant", UPSTREAM_HOST);
 
-console.log("\nKunci pengembang");
+console.log("\nDeveloper key");
 if (process.env.T3N_API_KEY) {
-  lolos("T3N_API_KEY", "tersedia di lingkungan");
+  lolos("T3N_API_KEY", "present in the environment");
 } else {
   console.log(
     "  [tunda] T3N_API_KEY — belum ada. Klaim di https://go.terminal3.io/adk-community",
   );
   console.log(
-    "          Kunci hanya ditampilkan satu kali dan tidak bisa diambil ulang.",
+    "          The key is shown once and cannot be retrieved again.",
   );
 }
 
 console.log(
   gagal === 0
-    ? "\nSemua pemeriksaan yang tidak butuh kunci sudah lolos.\n"
+    ? "\nEvery check that does not require a key has passed.\n"
     : `\n${gagal} pemeriksaan gagal. Perbaiki dulu sebelum menjalankan langkah berikutnya.\n`,
 );
 process.exit(gagal === 0 ? 0 : 1);

@@ -1,0 +1,11 @@
+$ npm run step:01
+
+
+
+environment: sandbox
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+node       : https://cn-api.sg.testnet.t3n.terminal3.io
+eth address: 0xcbdf0480addeacbe6e7b27154585db65ad249379
+tenant DID : did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4
+
+session open. DID saved to state.json

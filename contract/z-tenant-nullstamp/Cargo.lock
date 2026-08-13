@@ -413,7 +413,7 @@ dependencies = [
 
 [[package]]
 name = "z-tenant-nullstamp"
-version = "0.1.7"
+version = "0.1.9"
 dependencies = [
  "hex",
  "serde",

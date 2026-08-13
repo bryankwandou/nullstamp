@@ -1,0 +1,37 @@
+$ npm run preflight
+
+
+
+
+PEMERIKSAAN PENDAHULUAN NULLSTAMP
+
+Perkakas
+  [ok]    Node.js — versi 24.13.0
+
+Contract artefact
+  [ok]    WASM component — 252806 bita di E:\000VSCODE PROJECT MULAI DARI DESEMBER 2025\nullstamp\contract\z-tenant-nullstamp\target\wasm32-wasip2\release\z_tenant_nullstamp.wasm
+
+SDK environment
+  [ok]    SDK default environment — testnet
+  [ok]    selected environment — sandbox
+  [ok]    node address — https://cn-api.sg.testnet.t3n.terminal3.io
+
+Node reachability
+  [ok]    manifest endpoint — HTTP 200
+
+Attestation
+  [ok]    operator manifest — signature valid, 3 peers, 1 RTMR3 measurement(s)
+  [ok]    signing time — 2026-08-11T14:14:45Z
+
+SDK crypto component
+  [ok]    loadWasmComponent — component loaded
+
+Demo destination
+  [ok]    target URL — https://postman-echo.com/post
+  [ok]    host for the grant — postman-echo.com
+
+Developer key
+  [ok]    T3N_API_KEY — present in the environment
+
+Every check that does not require a key has passed.
+

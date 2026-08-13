@@ -32,7 +32,7 @@
 /// design choice: Nullstamp's only way out is http-with-placeholders, so no path
 /// inside this contract can send data without passing through host-side marker
 /// substitution.
-package z:tenant-nullstamp@0.1.7;
+package z:tenant-nullstamp@0.1.9;
 
 world tenant-nullstamp {
     import host:tenant/tenant-context@1.0.0;

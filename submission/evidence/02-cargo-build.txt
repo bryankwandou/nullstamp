@@ -1,0 +1,7 @@
+$ cargo build --target wasm32-wasip2 --release
+
+   Compiling z-tenant-nullstamp v0.1.9 (E:\000VSCODE PROJECT MULAI DARI DESEMBER 2025\nullstamp\contract\z-tenant-nullstamp)
+    Finished `release` profile [optimized] target(s) in 24.79s
+
+$ ls -l target/wasm32-wasip2/release/z_tenant_nullstamp.wasm
+252806 bytes

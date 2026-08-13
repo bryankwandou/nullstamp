@@ -1,0 +1,14 @@
+$ npm run step:04b
+
+
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+effective contract id : 653
+re-pointing map ACLs...
+
+  secrets -> ?
+    readers & writers now restricted to contract 653
+  receipts -> ?
+    readers & writers now restricted to contract 653
+
+ACLs aligned. The contract can read and write its maps again.

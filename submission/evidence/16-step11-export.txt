@@ -1,0 +1,41 @@
+$ npm run step:11
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+
+--- STEP FAILED ---
+kind   : InsufficientCreditError
+message: InsufficientCredit (account=f21dce7928980eeea7dc93618b91f602a80fe1c4,
+                             required=10000000000, available=0)
+code   : RPC_ERROR
+requestId: 824ac0e3-0a2d-4d4a-b1d4-d1733f9e28a4
+
+NOTE — this failure is itself a finding, recorded as T-15 in docs/BUGS.md.
+
+The 20,000 test credit grant is advertised on the claim page as "enough for
+25 agents and ~5,000 protected actions". In practice a single contract
+execution locks a cap of 10,000,000,000 credits, and the grant of
+20,000,000,000 was exhausted by ten registrations plus roughly a dozen
+contract calls during this exercise.
+
+Balance readings taken along the way, all from getBalance():
+  start of exercise   : 19,989,922,328
+  after first receipt : 19,939,779,025
+  after v0.1.5        :  8,078,980,220
+  after v0.1.7        :  3,502,747,402
+  after v0.1.9        :              0
+
+What this run did prove before the credits ran out, all captured in the
+files above: contract 653 registered, ACLs re-pointed, credential seeded,
+grant installed, receipt rcpt_03cc7f7a193196184c661f0d issued inside the
+enclave with upstream status 200 and cluster sequence 115776, verified
+in-enclave as valid, listed back among eight receipts, and its two log lines
+read from the contract's own log.
+
+Step 11 is only an export helper. The receipt it would have written was
+already exported in the previous run and is committed at
+submission/live-receipt.json — rcpt_8fb056c99bbea7e655d72075, contract 639.
+
+That receipt is what section 17 verifies, and the verification needs no
+credits, no session, and no network. Which is precisely the point of the
+design: the account is now at zero and the node will no longer answer us,
+yet the receipt remains checkable by anyone, forever.

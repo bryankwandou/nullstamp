@@ -5,6 +5,23 @@ typed by hand, and all of it can be reproduced from a fresh clone.
 
 Live testnet, tenant `did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4`.
 
+Every block below was also captured to a file at the moment it ran. Those files are
+in `submission/evidence/`, numbered in the order they were produced, and the
+submission PDF quotes them directly. So each claim here has a source you can open.
+
+Two notes on the final state of the account.
+
+The receipt this page verifies — `rcpt_8fb056c99bbea7e655d72075`, contract 639 — is
+the one committed at `submission/live-receipt.json`. A later run registered contract
+653 and issued `rcpt_03cc7f7a193196184c661f0d`, which also verified in-enclave; that
+run's output is in the evidence folder.
+
+That later run stopped at step 11 because the 20,000 credit grant ran out. The node
+now answers `InsufficientCredit (required=10000000000, available=0)`. This is
+recorded as finding T-15, and it is worth noticing what it does *not* break: the
+offline verification in section 10 still passes, because recomputing a digest needs
+no credits, no session, and no network.
+
 ---
 
 ## 1. The contract builds and its tests pass

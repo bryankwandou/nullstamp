@@ -225,7 +225,7 @@ export default function Home() {
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-muted">
               The contract, the onboarding scripts, and the standalone verifier are
-              all in the repository, along with a report of the fourteen findings
+              all in the repository, along with a report of the fifteen findings
               this build produced against the ADK.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

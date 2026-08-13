@@ -38,7 +38,7 @@ try {
     wasm: new Uint8Array(wasm),
   });
 
-  console.log("nama kanonik :", hasil.name);
+  console.log("canonical name:", hasil.name);
   console.log("contract id   :", hasil.contract_id);
 
   writeState({

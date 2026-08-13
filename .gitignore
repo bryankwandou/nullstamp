@@ -27,3 +27,7 @@ submission/tampered-*.json
 # Sistem
 .DS_Store
 Thumbs.db
+
+# The video scaffold pulls in a Chrome download and hundreds of MB of node_modules.
+video/node_modules/
+video/out/

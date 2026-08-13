@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Penyingkapan saat bagian masuk pandangan.
+ * Reveal a section as it enters view.
  *
  * The final state is the CSS default, so the content stays visible with JavaScript
  * off. The observer detaches after firing once, because a section already shown
@@ -25,6 +25,16 @@ export function Reveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    // Someone who has asked for reduced motion should not have content gated behind
+    // an entrance animation at all, so show it immediately and skip the observer.
+    // This also makes headless capture deterministic under
+    // --force-prefers-reduced-motion, where the observer callback would otherwise
+    // race the screenshot.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setTampil(true);
+      return;
+    }
 
     if (typeof IntersectionObserver === "undefined") {
       setTampil(true);

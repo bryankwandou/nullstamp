@@ -1,0 +1,23 @@
+$ npm run step:10
+
+
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+{
+  "entries": [
+    {
+      "ts_ms": 1786585628437,
+      "level": "info",
+      "message": "nullstamp: calling POST postman-echo.com for receipt_issuance_demo with 2 profile fields",
+      "span_id": null
+    },
+    {
+      "ts_ms": 1786585628437,
+      "level": "info",
+      "message": "nullstamp: receipt rcpt_03cc7f7a193196184c661f0d issued, upstream status 200",
+      "span_id": null
+    }
+  ],
+  "next_seq": 1,
+  "truncated": false
+}

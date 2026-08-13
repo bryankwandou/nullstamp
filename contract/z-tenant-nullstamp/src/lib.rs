@@ -42,7 +42,7 @@
 #![warn(clippy::style, missing_debug_implementations)]
 #![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 
-pub const CONTRACT_VERSION: &str = "0.1.7";
+pub const CONTRACT_VERSION: &str = "0.1.9";
 
 wit_bindgen::generate!({
     world: "tenant-nullstamp",

@@ -1,0 +1,34 @@
+$ npm run step:06
+
+
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+contract       : z:f21dce7928980eeea7dc93618b91f602a80fe1c4:nullstamp
+functions      : issue-receipt, verify-receipt, list-receipts
+allowed hosts  : postman-echo.com
+
+grant read back: {
+  "agents": [
+    {
+      "agentDid": "did:t3n:f21dce7928980eeea7dc93618b91f602a80fe1c4",
+      "scripts": [
+        {
+          "scriptName": "z:f21dce7928980eeea7dc93618b91f602a80fe1c4:nullstamp",
+          "functions": [
+            "issue-receipt",
+            "verify-receipt",
+            "list-receipts"
+          ],
+          "allowedHosts": [
+            "postman-echo.com"
+          ],
+          "scopes": [],
+          "readScopes": [],
+          "validFromSecs": 1786585610,
+          "validUntilSecs": 1794361610
+        }
+      ]
+    }
+  ],
+  "discoverDids": []
+}

@@ -1,0 +1,61 @@
+$ cargo test --target x86_64-pc-windows-gnu
+
+running 53 tests
+test canon::tests::digest_panjangnya_tiga_puluh_dua_bita ... ok
+test canon::tests::identitas_receipt_berasal_dari_digest ... ok
+test canon::tests::menolak_marker_di_luar_namespace_profile ... ok
+test canon::tests::menolak_marker_kosong ... ok
+test canon::tests::bentuk_kanonik_tidak_bergantung_urutan_penulisan ... ok
+test canon::tests::menolak_marker_tanpa_penutup ... ok
+test canon::tests::mengumpulkan_field_profil_urut_dan_unik ... ok
+test canon::tests::membaca_host_dari_url ... ok
+test canon::tests::pengakuan_yang_kurang_ditolak ... ok
+test canon::tests::pengakuan_yang_pas_diterima ... ok
+test issue::tests::header_authorization_buatan_pemanggil_ditolak ... ok
+test canon::tests::pengakuan_yang_berlebih_ditolak ... ok
+test canon::tests::teks_tanpa_marker_menghasilkan_daftar_kosong ... ok
+test issue::tests::badan_permintaan_kosong_menghasilkan_daftar_field_kosong ... ok
+test issue::tests::jalur_non_wasm_menolak_dengan_jelas ... ok
+test issue::tests::marker_ke_namespace_secrets_ditolak ... ok
+test issue::tests::masukan_yang_pas_lolos_pemeriksaan ... ok
+test issue::tests::metode_asing_ditolak ... ok
+test issue::tests::penunjuk_yang_ada_ditarik ... ok
+test issue::tests::penunjuk_yang_tidak_ada_menjadi_null_bukan_galat ... ok
+test issue::tests::pengakuan_field_yang_kurang_membatalkan_sebelum_panggilan ... ok
+test issue::tests::penunjuk_kosong_tidak_menarik_apa_pun ... ok
+test issue::tests::masukan_bukan_json_ditolak ... ok
+test issue::tests::purpose_kosong_ditolak ... ok
+test issue::tests::tanggapan_bukan_json_tidak_menggagalkan_penarikan ... ok
+test issue::tests::url_tanpa_tls_ditolak ... ok
+test list::tests::awal_pemindaian_di_luar_rentang_diabaikan ... ok
+test list::tests::batas_bawaan_dipakai_saat_tidak_disebut ... ok
+test list::tests::batas_yang_kelewat_besar_dipangkas ... ok
+test list::tests::masukan_rusak_ditolak_sebagai_galat_penguraian ... ok
+test list::tests::awal_pemindaian_yang_sah_dipakai ... ok
+test list::tests::batas_yang_masuk_akal_dibiarkan ... ok
+test list::tests::awal_pemindaian_jatuh_ke_awalan_saat_kosong ... ok
+test list::tests::nol_diganti_batas_bawaan_karena_host_menolaknya ... ok
+test list::tests::rentang_menutup_seluruh_awalan ... ok
+test receipt::tests::digest_di_sampul_bisa_dihitung_ulang_dari_core ... ok
+test receipt::tests::core_memuat_nama_field_bukan_nilainya ... ok
+test list::tests::masukan_kosong_dianggap_permintaan_bawaan ... ok
+test receipt::tests::digest_stabil_untuk_core_yang_sama ... ok
+test receipt::tests::menambah_field_yang_dipakai_menggeser_digest ... ok
+test receipt::tests::sampul_tanpa_tanda_tangan_mencatat_alasannya ... ok
+test tests::contract_version_is_semver ... ok
+test receipt::tests::perubahan_sekecil_apa_pun_menggeser_digest ... ok
+test verify::tests::digest_yang_dipalsukan_agar_cocok_tetap_gagal_di_identitas ... ok
+test verify::tests::laporan_memuat_digest_saat_sah ... ok
+test verify::tests::menghapus_satu_field_yang_dipakai_terdeteksi ... ok
+test verify::tests::laporan_memuat_alasan_saat_gagal ... ok
+test verify::tests::receipt_id_kosong_ditolak ... ok
+test verify::tests::mengubah_isi_core_membuat_digest_tidak_cocok ... ok
+test verify::tests::receipt_utuh_dinyatakan_sah ... ok
+test verify::tests::menukar_host_tujuan_terdeteksi ... ok
+test verify::tests::sampul_tanpa_core_ditolak ... ok
+test verify::tests::sampul_tanpa_digest_ditolak ... ok
+test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+   Doc-tests z_tenant_nullstamp
+running 1 test
+test src\lib.rs - __export_tenant_nullstamp_impl (line 52) ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.25s

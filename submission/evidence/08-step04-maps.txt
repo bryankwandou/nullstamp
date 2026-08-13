@@ -1,0 +1,9 @@
+$ npm run step:04
+
+
+
+anchor verified — 3 peers, 1 RTMR3 measurement(s)
+sudah ada: z:f21dce7928980eeea7dc93618b91f602a80fe1c4:secrets
+status  : z:f21dce7928980eeea7dc93618b91f602a80fe1c4:secrets -> active
+sudah ada: z:f21dce7928980eeea7dc93618b91f602a80fe1c4:receipts
+status  : z:f21dce7928980eeea7dc93618b91f602a80fe1c4:receipts -> active

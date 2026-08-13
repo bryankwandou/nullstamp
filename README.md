@@ -97,8 +97,11 @@ scripts/src/                   onboarding and management steps
   verify-offline.ts            standalone verifier: no SDK, no network
 
 web/                           landing page and browser verifier
-docs/BUGS.md                   fourteen onboarding findings
+docs/BUGS.md                   fifteen onboarding findings
 docs/PROOF.md                  verbatim output from every step run
+submission/Nullstamp-Submission.pdf   the full dossier, evidence embedded
+submission/evidence/           18 files of captured command output
+submission/screenshots/        6 captures of the deployed site
 brand/                         mark, lockup, and brand guidelines
 ```
 
@@ -139,10 +142,10 @@ npm run step:01           # through step:11
 
 ## Notes for the Terminal 3 team
 
-Fourteen findings with reproduction steps are in [docs/BUGS.md](docs/BUGS.md),
-ordered by weight. The four that came out of actually running a contract on
-testnet are the ones I would read first, because none of them are discoverable
-from the documentation:
+Fifteen findings with reproduction steps are in [docs/BUGS.md](docs/BUGS.md),
+ordered by weight. The five that came out of actually running a contract on testnet
+are the ones I would read first, because none of them are discoverable from the
+documentation:
 
 - **T-11** — `tenant.claim()` answers HTTP 500 on an already-provisioned tenant,
   rather than reporting `already-admitted`. Two request ids included.
@@ -153,6 +156,9 @@ from the documentation:
   id, so every re-register silently invalidates every map ACL.
 - **T-14** — `kv-store.scan` returns raw CAS pointer envelopes (`T3VR` magic)
   where `kv-store.get` resolves them, with no error and no mention in the WIT.
+- **T-15** — the 20,000 credit grant was exhausted by ten registrations, against an
+  advertised "~5,000 protected actions". A single call locks 10,000,000,000 of a
+  20,000,000,000 grant.
 
 Also, the first code sample on the Quickstart cannot run as written:
 `trustAnchor` is required on `T3nClientConfig` and `T3nConfigError` is thrown in
